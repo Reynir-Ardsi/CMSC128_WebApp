@@ -1,16 +1,19 @@
 require("dotenv").config(); // loads .env when running locally
 
+// Import dependencies
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 
+// Initialize app
 const app = express();
 app.use(express.json());
 app.use(cors());
 
-// ✅ Use secret (from GitHub Actions or .env locally)
+// separated for security on an env file
 const mongoURI = process.env.Server_Connection_Key;
 
+// Connect to MongoDB
 mongoose.connect(mongoURI);
 
 // Define Task schema
@@ -30,6 +33,7 @@ app.get("/tasks", async (req, res) => {
     res.json(tasks);
 });
 
+// Get a single task by ID
 app.get("/tasks/:id", async (req, res) => {
     try {
         const task = await Task.findById(req.params.id);
@@ -40,12 +44,14 @@ app.get("/tasks/:id", async (req, res) => {
     }
 });
 
+// Create a new task
 app.post("/tasks", async (req, res) => {
     const task = new Task(req.body);
     await task.save();
     res.json(task);
 });
 
+// Update a task by ID
 app.put("/tasks/:id", async (req, res) => {
     try {
         const task = await Task.findByIdAndUpdate(req.params.id, req.body, { new: true });
@@ -56,6 +62,7 @@ app.put("/tasks/:id", async (req, res) => {
     }
 });
 
+// Delete a task by ID
 app.delete("/tasks/:id", async (req, res) => {
     try {
         const task = await Task.findByIdAndDelete(req.params.id);
@@ -67,4 +74,4 @@ app.delete("/tasks/:id", async (req, res) => {
 });
 
 // Start server
-app.listen(5000, () => console.log("🚀 Server running"));
+app.listen(5000, () => console.log("🚀 Server running..."));
