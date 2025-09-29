@@ -49,6 +49,34 @@
     .low { background: #28a745; }
     .actions button { margin-left: 4px; }
     .sort-row { margin-bottom: 10px; text-align: right; }
+
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #333;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      animation: fadeIn 0.3s;
+    }
+    .toast button {
+      background: transparent;
+      border: 1px solid #fff;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translate(-50%, 20px); }
+      to { opacity: 1; transform: translate(-50%, 0); }
+    }
   </style>
 </head>
 <body>
@@ -79,10 +107,15 @@
     <ul id="taskList"></ul>
   </div>
 
+  <div id="toastContainer"></div>
+
   <script>
     const API_URL = "http://localhost:5000/tasks";
     let tasks = [];
     const priorityOrder = { High: 1, Mid: 2, Low: 3 };
+
+    let lastDeleted = null;
+    let toastTimeout = null;
 
     async function fetchTasks() {
       const res = await fetch(API_URL);
@@ -135,9 +168,46 @@
 
     async function deleteTask(index) {
       const task = tasks[index];
+      const confirmed = confirm(`Are you sure you want to delete "${task.name}"?`);
+      if (!confirmed) return;
+
+      lastDeleted = { ...task, index };
       await fetch(`${API_URL}/${task._id}`, { method: "DELETE" });
       tasks.splice(index, 1);
       renderTasks();
+      showToast("Task deleted");
+    }
+
+
+    async function undoDelete() {
+      if (!lastDeleted) return;
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(lastDeleted)
+      });
+      const restoredTask = await res.json();
+      tasks.splice(lastDeleted.index, 0, restoredTask);
+      renderTasks();
+      hideToast();
+      lastDeleted = null;
+    }
+
+    function showToast(message) {
+      const container = document.getElementById("toastContainer");
+      container.innerHTML = `
+        <div class="toast">
+          ${message}
+          <button onclick="undoDelete()">Undo</button>
+        </div>
+      `;
+      if (toastTimeout) clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(hideToast, 4000);
+    }
+
+    function hideToast() {
+      const container = document.getElementById("toastContainer");
+      container.innerHTML = "";
     }
 
     function renderTasks() {

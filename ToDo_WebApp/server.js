@@ -11,10 +11,7 @@ app.use(cors());
 // ✅ Use secret (from GitHub Actions or .env locally)
 const mongoURI = process.env.Server_Connection_Key;
 
-mongoose.connect(mongoURI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-});
+mongoose.connect(mongoURI);
 
 // Define Task schema
 const TaskSchema = new mongoose.Schema({
@@ -70,4 +67,4 @@ app.delete("/tasks/:id", async (req, res) => {
 });
 
 // Start server
-app.listen(5000, () => console.log("🚀 Server running on http://localhost:5000"));
+app.listen(5000, () => console.log("🚀 Server running"));
