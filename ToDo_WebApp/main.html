@@ -77,6 +77,28 @@
       from { opacity: 0; transform: translate(-50%, 20px); }
       to { opacity: 1; transform: translate(-50%, 0); }
     }
+
+        .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-content {
+      background-color: #fff;
+      margin: 10% auto;
+      padding: 20px;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 400px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+
   </style>
 </head>
 <body>
@@ -108,8 +130,29 @@
   </div>
 
   <div id="toastContainer"></div>
+      <div id="editModal" class="modal">
+        <div id="modalContent" class="modal-content"></div>
+      </div>
 
   <script>
+    /**OVERLAY**/
+    function openModal(taskId) {
+      const modal = document.getElementById("editModal");
+      const content = document.getElementById("modalContent");
+
+      fetch(`edit.html?id=${taskId}`)
+        .then(response => response.text())
+        .then(html => {
+          content.innerHTML = html;
+          modal.style.display = "block";
+        });
+    }
+
+    function closeModal() {
+      document.getElementById("editModal").style.display = "none";
+    }
+
+    /**BACKEND**/
     const API_URL = "http://localhost:5000/tasks";
     let tasks = [];
     const priorityOrder = { High: 1, Mid: 2, Low: 3 };
@@ -251,7 +294,7 @@
         const editBtn = document.createElement("button");
         editBtn.textContent = "✏";
         editBtn.classList.add("edit-btn");
-        editBtn.onclick = () => window.location.href = `edit.html?id=${task._id}`;
+        editBtn.onclick = () => openModal(task._id);
 
         const deleteBtn = document.createElement("button");
         deleteBtn.textContent = "🗑";
