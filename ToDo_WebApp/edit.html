@@ -95,7 +95,7 @@
             const res = await fetch(`${API_URL}/${taskId}`);
             if (!res.ok) {
                 alert("Task not found");
-                window.location.href = "main.html";
+                parent.closeModal();
                 return;
             }
             task = await res.json();
@@ -120,11 +120,12 @@
             body: JSON.stringify(updatedTask)
             });
 
-            window.location.href = "main.html";
+            parent.closeModal();
+            parent.fetchTasks();
         }
 
         function cancelEdit() {
-            window.location.href = "main.html";
+            parent.closeModal();
         }
 
         loadTask();
