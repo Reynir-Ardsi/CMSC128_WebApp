@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Task</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        .edit-container {
+        background: white;
+        padding: 20px 25px;
+        border-radius: 12px;
+        box-shadow: 0px 4px 10px rgba(0,0,0,0.15);
+        width: 350px;
+        }
+
+        h2 { text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        input, select {
+            width: 100%; 
+            padding: 8px; 
+            border: 1px solid #ccc; 
+            border-radius: 6px;
+        }
+
+        button {
+            padding: 10px; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            width: 100%;
+        }
+
+        .save-btn {
+            background: #28a745;
+            color: white; 
+        }
+
+        .cancel-btn { 
+            background: #dc3545; 
+            color: white; 
+            margin-top: 8px; 
+        }
+</style>
+</head>
+
+<body>
+    <div class="edit-container">
+        <h2>Edit Task</h2>
+    <div class="form-group">
+        <label>Task Name:</label>
+        <input type="text" id="taskName">
+    </div>
+    <div class="form-group">
+        <label>Due Date:</label>
+        <input type="date" id="dueDate">
+    </div>
+    <div class="form-group">
+        <label>Due Time:</label>
+        <input type="time" id="dueTime">
+    </div>
+    <div class="form-group">
+        <label>Priority:</label>
+        <select id="priority">
+        <option value="Low">Low</option>
+        <option value="Mid">Mid</option>
+        <option value="High">High</option>
+        </select>
+    </div>
+        <button class="save-btn" onclick="saveTask()">Save</button>
+        <button class="cancel-btn" onclick="cancelEdit()">Cancel</button>
+    </div>
+
+    <script>
+        const API_URL = "http://localhost:5000/tasks";
+        const urlParams = new URLSearchParams(window.location.search);
+        const taskId = urlParams.get("id");
+        let task = null;
+
+        async function loadTask() {
+            const res = await fetch(`${API_URL}/${taskId}`);
+            if (!res.ok) {
+                alert("Task not found");
+                window.location.href = "main.html";
+                return;
+            }
+            task = await res.json();
+
+            document.getElementById("taskName").value = task.name;
+            document.getElementById("dueDate").value = task.dueDate;
+            document.getElementById("dueTime").value = task.dueTime;
+            document.getElementById("priority").value = task.priority;
+        }
+
+        async function saveTask() {
+            const updatedTask = {
+            name: document.getElementById("taskName").value,
+            dueDate: document.getElementById("dueDate").value,
+            dueTime: document.getElementById("dueTime").value,
+            priority: document.getElementById("priority").value,
+            };
+
+            await fetch(`${API_URL}/${task._id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(updatedTask)
+            });
+
+            window.location.href = "main.html";
+        }
+
+        function cancelEdit() {
+            window.location.href = "main.html";
+        }
+
+        loadTask();
+    </script>
+</body>
+</html>
