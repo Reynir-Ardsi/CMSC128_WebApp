@@ -144,6 +144,24 @@
   <div id="toastContainer"></div>
 
   <script>
+    /**OVERLAY**/
+    function openModal(taskId) {
+      const modal = document.getElementById("editModal");
+      const content = document.getElementById("modalContent");
+
+      fetch(`edit.html?id=${taskId}`)
+        .then(response => response.text())
+        .then(html => {
+          content.innerHTML = html;
+          modal.style.display = "block";
+        });
+    }
+
+    function closeModal() {
+      document.getElementById("editModal").style.display = "none";
+    }
+
+    /**BACKEND**/
     const API_URL = "http://localhost:5000/tasks";
     let tasks = [];
     const priorityOrder = { High: 1, Mid: 2, Low: 3 };
