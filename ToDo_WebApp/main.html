@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>To-Do List</title>
   <style>
     body {
@@ -12,7 +12,7 @@
       justify-content: center;
       padding: 40px;
     }
-    .todo-container {
+    .todo-container, .edit-container {
       background: white;
       padding: 20px 25px;
       border-radius: 12px;
@@ -31,6 +31,8 @@
     button.add-btn { background: #28a745; color: white; }
     button.edit-btn { background: #007bff; color: white; }
     button.delete-btn { background: #dc3545; color: white; }
+    button.save-btn { background: #28a745; color: white; width: 100%; margin-top: 10px; }
+    button.cancel-btn { background: #dc3545; color: white; width: 100%; margin-top: 8px; }
     ul { list-style: none; padding: 0; margin: 0; }
     ul li {
       padding: 10px; margin-bottom: 8px;
@@ -49,6 +51,7 @@
     .low { background: #28a745; }
     .actions button { margin-left: 4px; }
     .sort-row { margin-bottom: 10px; text-align: right; }
+    .form-group { margin-bottom: 12px; }
 
     .toast {
       position: fixed;
@@ -78,37 +81,19 @@
       to { opacity: 1; transform: translate(-50%, 0); }
     }
 
-        .modal {
-      display: none;
-      position: fixed;
-      z-index: 1000;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0, 0, 0, 0.5);
-    }
-
-    .modal-content {
-      background-color: #fff;
-      margin: 10% auto;
-      padding: 20px;
-      border-radius: 12px;
-      width: 90%;
-      max-width: 400px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-    }
-
+    .hidden { display: none; }
   </style>
 </head>
+
 <body>
-  <div class="todo-container">
+  <!-- ===================== MAIN PAGE ===================== -->
+  <div class="todo-container" id="mainPage">
     <h2>To-Do List</h2>
 
     <div class="input-row">
-      <input type="text" id="taskInput" placeholder="Task name">
-      <input type="date" id="dueDate">
-      <input type="time" id="dueTime">
+      <input type="text" id="taskInput" placeholder="Task name" />
+      <input type="date" id="dueDate" />
+      <input type="time" id="dueTime" />
       <select id="priorityInput">
         <option value="Low">Low</option>
         <option value="Mid">Mid</option>
@@ -129,10 +114,34 @@
     <ul id="taskList"></ul>
   </div>
 
+  <!-- ===================== EDIT PAGE ===================== -->
+  <div class="edit-container hidden" id="editPage">
+    <h2>Edit Task</h2>
+    <div class="form-group">
+      <label>Task Name:</label>
+      <input type="text" id="editName" />
+    </div>
+    <div class="form-group">
+      <label>Due Date:</label>
+      <input type="date" id="editDueDate" />
+    </div>
+    <div class="form-group">
+      <label>Due Time:</label>
+      <input type="time" id="editDueTime" />
+    </div>
+    <div class="form-group">
+      <label>Priority:</label>
+      <select id="editPriority">
+        <option value="Low">Low</option>
+        <option value="Mid">Mid</option>
+        <option value="High">High</option>
+      </select>
+    </div>
+    <button class="save-btn" onclick="saveTask()">Save</button>
+    <button class="cancel-btn" onclick="cancelEdit()">Cancel</button>
+  </div>
+
   <div id="toastContainer"></div>
-      <div id="editModal" class="modal">
-        <div id="modalContent" class="modal-content"></div>
-      </div>
 
   <script>
     /**OVERLAY**/
@@ -156,31 +165,27 @@
     const API_URL = "http://localhost:5000/tasks";
     let tasks = [];
     const priorityOrder = { High: 1, Mid: 2, Low: 3 };
-
     let lastDeleted = null;
     let toastTimeout = null;
+    let editingTask = null;
 
+    // ===================== FETCH TASKS =====================
     async function fetchTasks() {
       const res = await fetch(API_URL);
       tasks = await res.json();
       renderTasks();
     }
 
+    // ===================== ADD TASK =====================
     async function addTask() {
-      const taskInput = document.getElementById("taskInput");
-      const dueDate = document.getElementById("dueDate");
-      const dueTime = document.getElementById("dueTime");
-      const priority = document.getElementById("priorityInput");
-
-      if (taskInput.value.trim() === "") return alert("Task cannot be empty");
+      const name = document.getElementById("taskInput").value.trim();
+      const dueDate = document.getElementById("dueDate").value;
+      const dueTime = document.getElementById("dueTime").value;
+      const priority = document.getElementById("priorityInput").value;
+      if (!name) return alert("Task cannot be empty");
 
       const newTask = {
-        name: taskInput.value,
-        dueDate: dueDate.value,
-        dueTime: dueTime.value,
-        priority: priority.value,
-        done: false,
-        added: Date.now()
+        name, dueDate, dueTime, priority, done: false, added: Date.now()
       };
 
       const res = await fetch(API_URL, {
@@ -191,13 +196,14 @@
       const savedTask = await res.json();
       tasks.push(savedTask);
 
-      taskInput.value = "";
-      dueDate.value = "";
-      dueTime.value = "";
-      priority.value = "Low";
+      document.getElementById("taskInput").value = "";
+      document.getElementById("dueDate").value = "";
+      document.getElementById("dueTime").value = "";
+      document.getElementById("priorityInput").value = "Low";
       renderTasks();
     }
 
+    // ===================== TOGGLE DONE =====================
     async function toggleDone(index) {
       const task = tasks[index];
       task.done = !task.done;
@@ -209,18 +215,16 @@
       renderTasks();
     }
 
+    // ===================== DELETE TASK =====================
     async function deleteTask(index) {
       const task = tasks[index];
-      const confirmed = confirm(`Are you sure you want to delete "${task.name}"?`);
-      if (!confirmed) return;
-
+      if (!confirm(`Delete "${task.name}"?`)) return;
       lastDeleted = { ...task, index };
       await fetch(`${API_URL}/${task._id}`, { method: "DELETE" });
       tasks.splice(index, 1);
       renderTasks();
       showToast("Task deleted");
     }
-
 
     async function undoDelete() {
       if (!lastDeleted) return;
@@ -236,23 +240,42 @@
       lastDeleted = null;
     }
 
-    function showToast(message) {
-      const container = document.getElementById("toastContainer");
-      container.innerHTML = `
-        <div class="toast">
-          ${message}
-          <button onclick="undoDelete()">Undo</button>
-        </div>
-      `;
-      if (toastTimeout) clearTimeout(toastTimeout);
-      toastTimeout = setTimeout(hideToast, 4000);
+    // ===================== EDIT TASK =====================
+    function openEdit(index) {
+      editingTask = tasks[index];
+      document.getElementById("mainPage").classList.add("hidden");
+      document.getElementById("editPage").classList.remove("hidden");
+
+      document.getElementById("editName").value = editingTask.name;
+      document.getElementById("editDueDate").value = editingTask.dueDate;
+      document.getElementById("editDueTime").value = editingTask.dueTime;
+      document.getElementById("editPriority").value = editingTask.priority;
     }
 
-    function hideToast() {
-      const container = document.getElementById("toastContainer");
-      container.innerHTML = "";
+    async function saveTask() {
+      if (!editingTask) return;
+      const updatedTask = {
+        name: document.getElementById("editName").value,
+        dueDate: document.getElementById("editDueDate").value,
+        dueTime: document.getElementById("editDueTime").value,
+        priority: document.getElementById("editPriority").value
+      };
+      await fetch(`${API_URL}/${editingTask._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedTask)
+      });
+      cancelEdit();
+      fetchTasks();
     }
 
+    function cancelEdit() {
+      document.getElementById("editPage").classList.add("hidden");
+      document.getElementById("mainPage").classList.remove("hidden");
+      editingTask = null;
+    }
+
+    // ===================== RENDER TASKS =====================
     function renderTasks() {
       const sortBy = document.getElementById("sortBy").value;
       const list = document.getElementById("taskList");
@@ -294,7 +317,7 @@
         const editBtn = document.createElement("button");
         editBtn.textContent = "✏";
         editBtn.classList.add("edit-btn");
-        editBtn.onclick = () => openModal(task._id);
+        editBtn.onclick = () => openEdit(index);
 
         const deleteBtn = document.createElement("button");
         deleteBtn.textContent = "🗑";
@@ -309,6 +332,21 @@
         li.appendChild(actions);
         list.appendChild(li);
       });
+    }
+
+    // ===================== TOAST =====================
+    function showToast(message) {
+      const container = document.getElementById("toastContainer");
+      container.innerHTML = `
+        <div class="toast">
+          ${message}
+          <button onclick="undoDelete()">Undo</button>
+        </div>`;
+      if (toastTimeout) clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(hideToast, 4000);
+    }
+    function hideToast() {
+      document.getElementById("toastContainer").innerHTML = "";
     }
 
     fetchTasks();
