@@ -164,18 +164,18 @@ app.put("/accounts/:id", async (req, res) => {
     }
 });
 
-// Delete account
-app.delete("/accounts/:id", async (req, res) => {
-    try {
-    const user = await User.findByIdAndDelete(req.params.id);
-    if (!user) return res.status(404).json({ error: "User not found" });
+// // Delete account
+// app.delete("/accounts/:id", async (req, res) => {
+//     try {
+//     const user = await User.findByIdAndDelete(req.params.id);
+//     if (!user) return res.status(404).json({ error: "User not found" });
 
-    res.json({ message: "Account deleted successfully" });
-    } catch (err) {
-    console.error(err);
-    res.status(400).json({ error: "Failed to delete account" });
-    }
-});
+//     res.json({ message: "Account deleted successfully" });
+//     } catch (err) {
+//     console.error(err);
+//     res.status(400).json({ error: "Failed to delete account" });
+//     }
+// });
 
 //SERVER START
 app.listen(5000, () => console.log("🚀 Server running on port 5000"));
