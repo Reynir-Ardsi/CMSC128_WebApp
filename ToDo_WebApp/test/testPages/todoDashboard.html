@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>To-Do Dashboard</title>
+<style>
+:root {
+    --textfield: #0F172A;
+    --background: #0B1120;     /* Deep navy black */
+    --surface: #1E293B;        /* Dark slate blue surface */
+    --primary: #2563EB;        /* Bright blue */
+    --primary-hover: #3B82F6;  /* Lighter hover blue */
+    --accent: #3B82F6;         /* Teal accent */
+    --text: #F1F5F9;           /* Near-white text */
+    --muted-text: #94A3B8;     /* Muted blue-gray */
+    --success: #22C55E;        /* Soft green */
+    --danger: #EF4444;         /* Coral red */
+    --shadow: rgba(0, 0, 0, 0.6);
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: var(--background);
+    display: flex;
+    justify-content: center;
+    padding: 40px;
+    color: var(--text);
+}
+
+.dashboard {
+    display: flex;
+    gap: 30px;
+    max-width: 1000px;
+    width: 100%;
+}
+
+/* To-Do container */
+.todo-container {
+    background: var(--surface);
+    padding: 20px 25px;
+    border-radius: 12px;
+    box-shadow: 0px 4px 10px var(--shadow);
+    flex: 1;
+    position: relative;
+}
+
+h2 { text-align: center; margin-bottom: 15px; color: var(--text); }
+
+.input-row {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 15px;
+}
+
+.input-row input, .input-row select {
+    padding: 8px;
+    border: 1px solid #475569;
+    border-radius: 6px;
+    background: var(--textfield);
+    color: var(--text);
+}
+
+#taskInput { flex: 1; }
+
+button {
+    padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer;
+    font-weight: bold;
+}
+
+button.add-btn { background: var(--success); color: var(--text); }
+button.edit-btn { background: var(--primary); color: var(--text); }
+button.delete-btn { background: var(--danger); color: var(--text); }
+button.save-btn { background: var(--success); color: var(--text); width: 100%; margin-top: 10px; }
+button.cancel-btn { background: var(--danger); color: var(--text); width: 100%; margin-top: 8px; }
+
+ul { list-style: none; padding: 0; margin: 0; }
+
+ul li {
+    padding: 10px;
+    margin-bottom: 8px;
+    background: var(--textfield);
+    border: 1px solid #334155;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.task-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.task-text.done {
+    text-decoration: line-through;
+    color: var(--muted-text);
+}
+
+.task-time { font-size: 0.8em; color: var(--muted-text); }
+
+.priority-tag {
+    font-size: 0.75em;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 5px;
+    color: #fff;
+}
+
+.high { background: var(--danger); }
+.mid { background: #FBBF24; color: #1E293B; }
+.low { background: var(--success); }
+
+.sort-row { margin-bottom: 10px; text-align: right; }
+
+.form-group { margin-bottom: 12px; }
+
+.hidden { display: none; }
+
+input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+input, select {
+    background: var(--textfield);
+    color: #F1F5F9;
+    border: 1px solid #475569;
+    border-radius: 6px;
+    padding: 8px;
+}
+
+/* Date and Time inputs icon color */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+    filter: invert(1); /* Makes the icons white */
+}
+
+.actions button { margin-left: 4px; }
+
+.top-right {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+}
+
+.profile-btn {
+    padding: 6px 12px;
+    background: var(--primary);
+    color: var(--text);
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.profile-btn:hover {
+    background: var(--primary-hover);
+}
+
+/* Edit container modal styles */
+.edit-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 900;
+    display: none;
+}
+
+.edit-container {
+    background: var(--surface);
+    padding: 20px 25px;
+    border-radius: 12px;
+    box-shadow: 0px 4px 10px var(--shadow);
+    width: 420px;
+    max-height: 500px;
+    overflow-y: auto;
+    flex: none;
+
+    /* Centering */
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+
+    opacity: 0;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.edit-container.show {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+}
+
+.edit-container .form-group {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.edit-container .form-group label {
+    width: 30%;
+    margin-right: 10px;
+}
+
+.edit-container .form-group input,
+.edit-container .form-group select {
+    width: 200px;
+}
+
+</style>
+</head>
+<body>
+
+<div class="dashboard">
+    <!-- To-Do Section -->
+    <div class="todo-container" id="mainPage">
+        <h2>To-Do Dashboard</h2>
+
+        <div class="top-right">
+            <button class="profile-btn">Profile</button>
+        </div>
+
+        <div class="input-row">
+            <input type="text" id="taskInput" placeholder="Task name" />
+            <input type="date" id="dueDate" />
+            <input type="time" id="dueTime" />
+            <select id="priorityInput">
+                <option value="Low">Low</option>
+                <option value="Mid">Mid</option>
+                <option value="High">High</option>
+            </select>
+            <button class="add-btn" onclick="addTask()">Add</button>
+        </div>
+
+        <div class="sort-row">
+            <label for="sortBy">Sort by: </label>
+            <select id="sortBy" onchange="renderTasks()">
+                <option value="added">Date Added</option>
+                <option value="due">Due Date</option>
+                <option value="priority">Priority</option>
+            </select>
+        </div>
+
+        <ul id="taskList"></ul>
+    </div>
+</div>
+
+<!-- Edit Overlay -->
+<div class="edit-overlay" id="editOverlay"></div>
+
+<!-- Edit Container -->
+<div class="edit-container hidden" id="editPage">
+    <h2>Edit Task</h2>
+    <div class="form-group">
+        <label>Task Name:</label>
+        <input type="text" id="editName" />
+    </div>
+    <div class="form-group">
+        <label>Due Date:</label>
+        <input type="date" id="editDueDate" />
+    </div>
+    <div class="form-group">
+        <label>Due Time:</label>
+        <input type="time" id="editDueTime" />
+    </div>
+    <div class="form-group">
+        <label>Priority:</label>
+        <select id="editPriority">
+            <option value="Low">Low</option>
+            <option value="Mid">Mid</option>
+            <option value="High">High</option>
+        </select>
+    </div>
+    <button class="save-btn" onclick="saveTask()">Save</button>
+    <button class="cancel-btn" onclick="cancelEdit()">Cancel</button>
+</div>
+
+<script>
+let tasks = [];
+let editIndex = null;
+
+function addTask() {
+    const name = document.getElementById('taskInput').value.trim();
+    const date = document.getElementById('dueDate').value;
+    const time = document.getElementById('dueTime').value;
+    const priority = document.getElementById('priorityInput').value;
+
+    if (!name) return alert("Enter a task name!");
+
+    tasks.push({ name, date, time, priority, done: false, added: new Date().toISOString() });
+    clearInputs();
+    renderTasks();
+}
+
+function clearInputs() {
+    document.getElementById('taskInput').value = '';
+    document.getElementById('dueDate').value = '';
+    document.getElementById('dueTime').value = '';
+    document.getElementById('priorityInput').value = 'Low';
+}
+
+function toggleDone(index) {
+    tasks[index].done = !tasks[index].done;
+    renderTasks();
+}
+
+function deleteTask(index) {
+    if (confirm("Delete this task?")) tasks.splice(index, 1);
+    renderTasks();
+}
+
+function editTask(index) {
+    editIndex = index;
+    const task = tasks[index];
+    document.getElementById('editName').value = task.name;
+    document.getElementById('editDueDate').value = task.date;
+    document.getElementById('editDueTime').value = task.time;
+    document.getElementById('editPriority').value = task.priority;
+
+    document.getElementById('editPage').classList.remove('hidden');
+    document.getElementById('editPage').classList.add('show');
+    document.getElementById('editOverlay').style.display = 'block';
+}
+
+function saveTask() {
+    const task = tasks[editIndex];
+    task.name = document.getElementById('editName').value;
+    task.date = document.getElementById('editDueDate').value;
+    task.time = document.getElementById('editDueTime').value;
+    task.priority = document.getElementById('editPriority').value;
+
+    cancelEdit();
+    renderTasks();
+}
+
+function cancelEdit() {
+    document.getElementById('editPage').classList.add('hidden');
+    document.getElementById('editPage').classList.remove('show');
+    document.getElementById('editOverlay').style.display = 'none';
+}
+
+function renderTasks() {
+    const sortBy = document.getElementById('sortBy').value;
+    let sortedTasks = [...tasks];
+
+    if (sortBy === 'due') sortedTasks.sort((a,b)=> (a.date||'')>(b.date||'')?1:-1);
+    else if (sortBy === 'priority') sortedTasks.sort((a,b)=> ({High:1,Mid:2,Low:3}[a.priority]-({High:1,Mid:2,Low:3}[b.priority])));
+    else sortedTasks.sort((a,b)=> new Date(a.added)-new Date(b.added));
+
+    const list = document.getElementById('taskList');
+    list.innerHTML = '';
+
+    sortedTasks.forEach((task,i)=>{
+        const li=document.createElement('li');
+
+        const checkbox=document.createElement('input');
+        checkbox.type='checkbox';
+        checkbox.checked=task.done;
+        checkbox.onchange=()=>toggleDone(tasks.indexOf(task));
+
+        const info=document.createElement('div');
+        info.className='task-info';
+
+        const text=document.createElement('span');
+        text.className='task-text'+(task.done?' done':'');
+        text.textContent=task.name;
+
+        const time=document.createElement('span');
+        time.className='task-time';
+        time.textContent=`${task.date||''} ${task.time||''}`;
+
+        const priority=document.createElement('span');
+        priority.className=`priority-tag ${task.priority.toLowerCase()}`;
+        priority.textContent=task.priority;
+
+        info.appendChild(text);
+        info.appendChild(time);
+
+        const actions=document.createElement('div');
+        actions.className='actions';
+
+        const editBtn=document.createElement('button');
+        editBtn.className='edit-btn';
+        editBtn.textContent='Edit';
+        editBtn.onclick=()=>editTask(tasks.indexOf(task));
+
+        const delBtn=document.createElement('button');
+        delBtn.className='delete-btn';
+        delBtn.textContent='Delete';
+        delBtn.onclick=()=>deleteTask(tasks.indexOf(task));
+
+        actions.appendChild(editBtn);
+        actions.appendChild(delBtn);
+
+        li.appendChild(checkbox);
+        li.appendChild(info);
+        li.appendChild(priority);
+        li.appendChild(actions);
+
+        list.appendChild(li);
+    });
+}
+</script>
+</body>
+</html>
