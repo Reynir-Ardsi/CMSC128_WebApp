@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Account Profile</title>
 <style>
-    /* 🎨 Deep Focus Blue Dark Mode Palette */
     :root {
         --background: #0B1120;     /* Deep navy black */
         --surface: #1E293B;        /* Dark slate blue surface */
@@ -59,9 +58,10 @@
         box-sizing: border-box;
     }
 
-    input:focus {
-        border-color: var(--primary);
-        background: #1E293B;
+    input:focus,
+    select:focus {
+    border-color: var(--accent); /* or var(--primary) */
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3); /* subtle glow */
     }
 
     .password-row {
@@ -130,7 +130,7 @@
         <h2>Profile Settings</h2>
         <div class="message" id="msg"></div>
         <input type="text" id="name" placeholder="Full Name" />
-        <input type="email" id="email" placeholder="Email" disabled />
+        <input type="email" id="email" placeholder="Email" />
         <div class="password-row">
             <input type="password" id="password" placeholder="New Password (optional)" />
             <button class="toggle-btn" id="togglePassword">Show</button>
