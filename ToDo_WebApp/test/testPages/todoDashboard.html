@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>To-Do Dashboard — Collaborative</title>
+<style>
+:root{
+    --bg:#0B1120; --surface:#0E2236; --panel:#0F172A; --muted:#94A3B8;
+    --primary:#2563EB; --primary-2:#3B82F6; --accent:#22C55E; --danger:#EF4444;
+    --text:#F1F5F9; --card:#111827; --glass: rgba(255,255,255,0.04);
+    --shadow: 0 6px 22px rgba(2,6,23,0.6);
+}
+
+  *{box-sizing:border-box}
+html,body{height:100%; margin:0; font-family:Inter,system-ui,Arial; background:var(--bg); color:var(--text); -webkit-font-smoothing:antialiased}
+button{cursor:pointer; font-family:inherit}
+
+.app { display:flex; height:100vh; width:100vw; overflow:hidden; gap:18px; padding:18px; align-items:stretch; }
+.sidebar { width:33%; min-width:280px; background:linear-gradient(180deg,var(--surface), #0b1626); border-radius:12px; padding:18px; display:flex; flex-direction:column; box-shadow:var(--shadow); position:relative; overflow:hidden; }
+.sidebar-inner { display:flex; flex-direction:column; height:100%; overflow:auto; padding-right:8px; }
+
+.title-row{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px}
+.title-row h1{margin:0; font-size:20px; font-weight:600}
+.profile-btn{background:var(--primary); border:none; color:var(--text); padding:8px 12px; border-radius:8px; font-weight:600}
+.profile-btn:hover{background:var(--primary-2)}
+
+details{background:transparent; margin-bottom:12px}
+summary{list-style:none; cursor:pointer; display:flex; justify-content:space-between; align-items:center; padding:8px 6px; border-radius:8px}
+summary:hover{background:var(--glass)}
+.groups-list{margin-top:8px; display:flex; flex-direction:column; gap:8px}
+.group-item{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px; border-radius:8px; background:var(--panel); border:1px solid rgba(255,255,255,0.02); transition:transform .12s ease, background .12s ease}
+.group-item:hover{transform:translateY(-3px)}
+.group-item.active{outline:2px solid rgba(59,130,246,.12); box-shadow:0 6px 20px rgba(37,99,235,.06)}
+.group-left{display:flex; align-items:center; gap:10px}
+.group-name{font-weight:600}
+.group-meta{font-size:12px; color:var(--muted)}
+
+.group-actions{display:flex; align-items:center; gap:8px}
+.btn-icon{background:none; border:none; color:var(--muted); padding:6px; border-radius:6px}
+.btn-icon:hover{background:rgba(255,255,255,0.02); color:var(--text)}
+
+.add-group-wrap{margin-top:auto; display:flex; justify-content:center}
+.add-group-btn{width:100%; background:var(--primary); border:none; padding:10px; border-radius:8px; color:var(--text); font-weight:700}
+.add-group-btn:hover{background:var(--primary-2)}
+
+.main { width:67%; background:linear-gradient(180deg,var(--panel), #071122); border-radius:12px; padding:22px; display:flex; flex-direction:column; box-shadow:var(--shadow); overflow:hidden; }
+.main-top { display:flex; align-items:center; justify-content:space-between; gap:12px }
+.add-task-btn{background:var(--accent); border:none; color:#042014; padding:10px 14px; border-radius:8px; font-weight:700}
+.add-task-btn:hover{filter:brightness(1.05)}
+
+.task-area{margin-top:12px; overflow:auto; padding-right:10px; display:flex; flex-direction:column; gap:12px}
+.task-card{display:flex; gap:14px; align-items:center; justify-content:space-between; padding:14px; border-radius:10px; background:var(--panel); border:1px solid rgba(255,255,255,0.02); transition:transform .12s ease, box-shadow .12s ease;}
+.task-card:hover{transform:translateY(-4px); box-shadow:0 8px 24px rgba(2,6,23,0.6)}
+.task-left{display:flex; gap:12px; align-items:center; flex:1}
+.check { width:20px; height:20px; border-radius:4px; border:2px solid rgba(255,255,255,0.12); display:inline-flex; align-items:center; justify-content:center; cursor:pointer; background:transparent; }
+.check.checked{background:linear-gradient(180deg,var(--primary),var(--primary-2)); border-color:transparent; color:white}
+.task-info{display:flex; flex-direction:column; gap:4px; min-width:0}
+.task-name{font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.task-due{font-size:13px; color:var(--muted)}
+.task-right{display:flex; align-items:center; gap:8px}
+.priority-tag{padding:6px 8px; border-radius:8px; font-weight:700; font-size:12px}
+.priority-high{background:var(--danger); color:white}
+.priority-mid{background:#FBBF24; color:#1E293B}
+.priority-low{background:var(--accent); color:#042014}
+.task-actions{display:flex; gap:6px; align-items:center}
+.task-actions button{background:none; border:none; color:var(--muted); padding:8px; border-radius:6px}
+.task-actions button:hover{background:rgba(255,255,255,0.02); color:var(--text)}
+.task-card.done .task-name{ text-decoration:line-through; color:rgba(255,255,255,0.45) }
+.task-card.done .task-due{ color:rgba(255,255,255,0.37) }
+.task-card.done .priority-tag{opacity:0.6}
+
+.overlay { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.5); z-index:9999; }
+.overlay.show{display:flex}
+.modal { width:420px; max-width:94%; padding:18px; border-radius:12px; background:linear-gradient(180deg,var(--surface), #0c1b2b); box-shadow:0 10px 30px rgba(2,6,23,0.7); transform:translateY(8px); opacity:0; transition:opacity .18s ease, transform .18s ease; }
+.overlay.show .modal{transform:none; opacity:1}
+.modal h2{margin:0 0 12px 0}
+.field{display:flex; flex-direction:column; gap:8px; margin-bottom:10px}
+.field input, .field select, .field textarea{padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.06); background:var(--panel); color:var(--text)}
+.modal .row{display:flex; gap:8px}
+.modal .row .field{flex:1}
+.modal .actions{display:flex; gap:8px; margin-top:8px}
+.btn-primary{background:var(--primary); color:white; border:none; padding:10px 12px; border-radius:8px; font-weight:700}
+.btn-danger{background:var(--danger); color:white; border:none; padding:10px 12px; border-radius:8px; font-weight:700}
+.btn-ghost{background:transparent; color:var(--muted); border:1px solid rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px}
+.muted{color:var(--muted); font-size:13px}
+.flex{display:flex}
+.center{align-items:center}
+.gap6{gap:6px}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- SIDEBAR -->
+<aside class="sidebar" aria-label="Sidebar">
+    <div class="sidebar-inner">
+    <div class="title-row">
+        <h1>To Do</h1>
+        <button class="profile-btn" title="Profile">Profile</button>
+    </div>
+
+    <details open>
+        <summary>
+        <div class="flex center gap6">
+            <strong>Personal</strong>
+            <span class="muted" id="personal-count">(0)</span>
+        </div>
+        <div class="muted">⌄</div>
+        </summary>
+        <div class="groups-list" id="personalGroups"></div>
+    </details>
+
+    <details open>
+        <summary>
+        <div class="flex center gap6">
+            <strong>Collaborative</strong>
+            <span class="muted" id="collab-count">(0)</span>
+        </div>
+        <div class="muted">⌄</div>
+        </summary>
+        <div class="groups-list" id="collabGroups"></div>
+    </details>
+
+    <div class="add-group-wrap">
+        <button class="add-group-btn" id="btnAddGroup">+ Add Task Group</button>
+    </div>
+    </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main" aria-label="Main content">
+<div class="main-top">
+    <div>
+        <h2 id="selectedGroupTitle" style="margin:0">All tasks</h2>
+        <div class="muted" id="selectedGroupMeta">Showing all tasks</div>
+    </div>
+    <div class="flex center gap6">
+        <button class="btn-ghost" id="btnClearCompleted" title="Clear completed">Clear completed</button>
+        <button class="add-task-btn" id="btnAddTask">+ Add Task</button>
+    </div>
+</div>
+
+    <!-- Collaborator button -->
+    <div id="collaboratorBtnContainer" style="margin-top:12px; display:none;">
+        <button class="btn-primary" id="btnAddCollaboratorMain">+ Add Collaborator</button>
+    </div>
+
+    <section class="task-area" id="taskArea" aria-live="polite"></section>
+    </main>
+</div>
+
+<!-- Task Modal -->
+<div class="overlay" id="taskOverlay" aria-hidden="true">
+    <div class="modal">
+    <h2 id="taskModalTitle">Create Task</h2>
+    <div class="field">
+        <label class="muted">Task name</label>
+        <input id="modalTaskName" placeholder="E.g. Prepare slides" />
+    </div>
+    <div class="row">
+        <div class="field"><label class="muted">Due date</label><input id="modalDueDate" type="date"/></div>
+        <div class="field"><label class="muted">Due time</label><input id="modalDueTime" type="time"/></div>
+    </div>
+    <div class="row">
+        <div class="field">
+        <label class="muted">Priority</label>
+        <select id="modalPriority"><option>Low</option><option>Mid</option><option>High</option></select>
+        </div>
+        <div class="field">
+        <label class="muted">Assign group</label>
+        <select id="modalGroup"></select>
+        </div>
+    </div>
+    <div class="actions">
+        <button class="btn-primary" id="saveTaskBtn">Save</button>
+        <button class="btn-ghost" id="cancelTaskBtn">Cancel</button>
+    </div>
+    </div>
+</div>
+
+<!-- Group Modal -->
+<div class="overlay" id="groupOverlay" aria-hidden="true">
+    <div class="modal">
+    <h2>Create Task Group</h2>
+    <div class="field">
+        <label class="muted">Group name</label>
+        <input id="modalGroupName" placeholder="E.g. Groceries" />
+    </div>
+    <div class="field">
+        <label class="muted">Type</label>
+        <select id="modalGroupType"><option value="personal">Personal</option><option value="collab">Collaborative</option></select>
+    </div>
+    <div class="actions">
+        <button class="btn-primary" id="saveGroupBtn">Create</button>
+        <button class="btn-ghost" id="cancelGroupBtn">Cancel</button>
+    </div>
+</div>
+</div>
+
+<!-- Confirm delete overlay -->
+<div class="overlay" id="confirmOverlay" aria-hidden="true">
+<div class="modal">
+    <h2 id="confirmTitle">Confirm</h2>
+    <div class="muted" id="confirmMessage">Are you sure?</div>
+    <div class="actions" style="margin-top:14px">
+    <button class="btn-danger" id="confirmYes">Yes</button>
+    <button class="btn-ghost" id="confirmNo">No</button>
+    </div>
+</div>
+</div>
+
+<script>
+// --- STATE ---
+const STORAGE_KEY = 'todo_v2';
+let state = { groups: [], tasks: [], selectedGroupId: null };
+let editingTaskId = null;
+let pendingConfirm = null;
+
+// --- UTIL ---
+function uid(prefix='id'){ return prefix+'_'+Date.now().toString(36)+Math.floor(Math.random()*1000).toString(36); }
+function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+function loadState(){ const raw=localStorage.getItem(STORAGE_KEY); if(raw) state=JSON.parse(raw); }
+
+// --- RENDER ---
+const personalGroupsEl = document.getElementById('personalGroups');
+const collabGroupsEl = document.getElementById('collabGroups');
+const personalCount = document.getElementById('personal-count');
+const collabCount = document.getElementById('collab-count');
+const selectedGroupTitle = document.getElementById('selectedGroupTitle');
+const selectedGroupMeta = document.getElementById('selectedGroupMeta');
+const taskArea = document.getElementById('taskArea');
+const collaboratorBtnContainer = document.getElementById('collaboratorBtnContainer');
+const modalGroupSelect = document.getElementById('modalGroup');
+
+function renderGroups(){
+personalGroupsEl.innerHTML=''; collabGroupsEl.innerHTML='';
+const personal = state.groups.filter(g=>g.type==='personal');
+const collab = state.groups.filter(g=>g.type==='collab');
+personalCount.textContent=`(${personal.length})`;
+collabCount.textContent=`(${collab.length})`;
+
+const createGroupEl = (g)=>{
+    const item=document.createElement('div'); item.className='group-item'+(state.selectedGroupId===g.id?' active':''); item.dataset.id=g.id;
+    const left=document.createElement('div'); left.className='group-left';
+    const icon=document.createElement('div'); icon.textContent='📁';
+    const name=document.createElement('div'); name.className='group-name'; name.textContent=g.name;
+    left.appendChild(icon); left.appendChild(name);
+
+    const actions=document.createElement('div'); actions.className='group-actions';
+    const count=document.createElement('div'); count.className='muted'; count.textContent=countTasksForGroup(g.id);
+    const delBtn=document.createElement('button'); delBtn.className='btn-icon'; delBtn.title='Delete group'; delBtn.innerHTML='✖';
+    delBtn.addEventListener('click', e=>{ e.stopPropagation(); confirmAction(`Delete group "${g.name}"? Tasks remain ungrouped.`, ()=> deleteGroup(g.id)); });
+    actions.appendChild(count); actions.appendChild(delBtn);
+
+    item.appendChild(left); item.appendChild(actions);
+    item.addEventListener('click', ()=> selectGroup(g.id));
+    return item;
+};
+personal.forEach(g=>personalGroupsEl.appendChild(createGroupEl(g)));
+collab.forEach(g=>collabGroupsEl.appendChild(createGroupEl(g)));
+}
+
+function countTasksForGroup(groupId){ return state.tasks.filter(t=>t.groupId===groupId).length; }
+
+function renderTasks(){
+taskArea.innerHTML='';
+const filtered = state.selectedGroupId ? state.tasks.filter(t=>t.groupId===state.selectedGroupId) : state.tasks;
+const sorted = filtered.slice().sort((a,b)=>{ if(a.done!==b.done) return a.done?1:-1; const ta=(a.date||'')+' '+(a.time||''); const tb=(b.date||'')+' '+(b.time||''); return ta>tb?1:ta<tb?-1:0; });
+
+const g = state.groups.find(x=>x.id===state.selectedGroupId);
+if(state.selectedGroupId){
+    selectedGroupTitle.textContent=g?g.name:'Group';
+    selectedGroupMeta.textContent=`${sorted.length} task${sorted.length!==1?'s':''}`;
+} else {
+    selectedGroupTitle.textContent='All tasks';
+    selectedGroupMeta.textContent=`${sorted.length} task${sorted.length!==1?'s':''}`;
+}
+
+  // Show collaborator button only for collaborative groups
+    if(g && g.type==='collab'){ collaboratorBtnContainer.style.display='block'; }
+    else{ collaboratorBtnContainer.style.display='none'; }
+
+sorted.forEach(t=>{
+    const card=document.createElement('div'); card.className='task-card'+(t.done?' done':'');
+    const left=document.createElement('div'); left.className='task-left';
+    const check=document.createElement('div'); check.className='check'+(t.done?' checked':''); check.addEventListener('click', ()=>{ t.done=!t.done; saveState(); renderTasks(); });
+    left.appendChild(check);
+
+    const info=document.createElement('div'); info.className='task-info';
+    const name=document.createElement('div'); name.className='task-name'; name.textContent=t.name;
+    const due=document.createElement('div'); due.className='task-due'; due.textContent=(t.date||'')+(t.time?' '+t.time:'');
+    info.appendChild(name); info.appendChild(due);
+    left.appendChild(info);
+
+    const right=document.createElement('div'); right.className='task-right';
+    if(t.priority){
+        const pri=document.createElement('div'); pri.className='priority-tag priority-'+t.priority.toLowerCase(); pri.textContent=t.priority;
+        right.appendChild(pri);
+    }
+
+    const actions=document.createElement('div'); actions.className='task-actions';
+    const editBtn=document.createElement('button'); editBtn.innerHTML='✎'; editBtn.title='Edit task'; editBtn.addEventListener('click', ()=> openTaskModal(t.id));
+    const delBtn=document.createElement('button'); delBtn.innerHTML='✖'; delBtn.title='Delete task'; delBtn.addEventListener('click', ()=> confirmAction('Delete task? ', ()=> deleteTask(t.id)));
+    actions.appendChild(editBtn); actions.appendChild(delBtn);
+    right.appendChild(actions);
+
+    card.appendChild(left); card.appendChild(right);
+    taskArea.appendChild(card);
+    });
+}
+
+function selectGroup(groupId){
+    state.selectedGroupId = groupId===state.selectedGroupId?null:groupId;
+    saveState();
+    renderGroups();
+    renderTasks();
+}
+
+// --- CRUD ---
+function addGroup(name,type){
+    const g={id:uid('g'),name:name,type:type,collaborators:[]};
+    state.groups.push(g);
+    saveState();
+    renderGroups();
+    renderTasks();
+}
+
+function deleteGroup(groupId){
+    state.groups=state.groups.filter(g=>g.id!==groupId);
+    state.tasks.forEach(t=>{ if(t.groupId===groupId) t.groupId=null; });
+    if(state.selectedGroupId===groupId) state.selectedGroupId=null;
+    saveState();
+    renderGroups();
+    renderTasks();
+}
+
+function addTask(name,date,time,priority,groupId){
+    const t={id:uid('t'),name,date,time,priority,groupId:groupId||null,done:false};
+    state.tasks.push(t);
+    saveState();
+    renderTasks();
+}
+
+function deleteTask(taskId){ state.tasks=state.tasks.filter(t=>t.id!==taskId); saveState(); renderTasks(); }
+
+// --- MODALS ---
+function showOverlay(el){ el.classList.add('show'); el.setAttribute('aria-hidden','false'); }
+function hideOverlay(el){ el.classList.remove('show'); el.setAttribute('aria-hidden','true'); }
+
+const taskOverlay=document.getElementById('taskOverlay');
+const groupOverlay=document.getElementById('groupOverlay');
+const modalTaskName=document.getElementById('modalTaskName');
+const modalDueDate=document.getElementById('modalDueDate');
+const modalDueTime=document.getElementById('modalDueTime');
+const modalPriority=document.getElementById('modalPriority');
+const modalGroup=document.getElementById('modalGroup');
+const saveTaskBtn=document.getElementById('saveTaskBtn');
+const cancelTaskBtn=document.getElementById('cancelTaskBtn');
+
+document.getElementById('btnAddTask').addEventListener('click', ()=> openTaskModal());
+cancelTaskBtn.addEventListener('click', ()=> hideOverlay(taskOverlay));
+
+function openTaskModal(taskId=null){
+    editingTaskId=taskId;
+    modalTaskName.value=''; modalDueDate.value=''; modalDueTime.value=''; modalPriority.value='Low';
+    modalGroup.innerHTML='<option value="">None</option>';
+    state.groups.forEach(g=>{ const opt=document.createElement('option'); opt.value=g.id; opt.textContent=g.name; modalGroup.appendChild(opt); });
+    if(taskId){
+    const t=state.tasks.find(x=>x.id===taskId);
+    if(t){ modalTaskName.value=t.name; modalDueDate.value=t.date||''; modalDueTime.value=t.time||''; modalPriority.value=t.priority||'Low'; modalGroup.value=t.groupId||''; }
+    }
+    showOverlay(taskOverlay);
+}
+
+saveTaskBtn.addEventListener('click', ()=>{
+    const name=modalTaskName.value.trim();
+    if(!name) return alert('Task name required');
+    const date=modalDueDate.value, time=modalDueTime.value, priority=modalPriority.value, groupId=modalGroup.value||null;
+    if(editingTaskId){
+    const t=state.tasks.find(x=>x.id===editingTaskId);
+    t.name=name; t.date=date; t.time=time; t.priority=priority; t.groupId=groupId;
+    } else addTask(name,date,time,priority,groupId);
+    hideOverlay(taskOverlay); saveState(); renderTasks();
+});
+
+// --- GROUP MODAL ---
+document.getElementById('btnAddGroup').addEventListener('click', ()=> showOverlay(groupOverlay));
+document.getElementById('cancelGroupBtn').addEventListener('click', ()=> hideOverlay(groupOverlay));
+document.getElementById('saveGroupBtn').addEventListener('click', ()=>{
+    const name=document.getElementById('modalGroupName').value.trim();
+    const type=document.getElementById('modalGroupType').value;
+    if(!name) return alert('Group name required');
+    addGroup(name,type); hideOverlay(groupOverlay);
+});
+
+// --- COLLABORATOR BUTTON ---
+const btnAddCollaboratorMain=document.getElementById('btnAddCollaboratorMain');
+const collabOverlay=document.createElement('div');
+collabOverlay.className='overlay';
+collabOverlay.innerHTML=`
+    <div class="modal">
+    <h2>Add Collaborator</h2>
+    <div class="field">
+        <label class="muted">Username or Email</label>
+        <input id="collabSearchInput" placeholder="Enter username or email"/>
+    </div>
+    <div class="actions">
+        <button class="btn-primary" id="collabAddBtn">Add</button>
+        <button class="btn-ghost" id="collabCancelBtn">Cancel</button>
+    </div>
+    </div>
+`;
+document.body.appendChild(collabOverlay);
+
+btnAddCollaboratorMain.addEventListener('click', ()=> showOverlay(collabOverlay));
+document.getElementById('collabCancelBtn').addEventListener('click', ()=> hideOverlay(collabOverlay));
+document.getElementById('collabAddBtn').addEventListener('click', ()=>{
+    const user=document.getElementById('collabSearchInput').value.trim();
+    if(!user) return alert('Enter a user');
+    const g=state.groups.find(g=>g.id===state.selectedGroupId);
+    if(g && !g.collaborators.includes(user)){ g.collaborators.push(user); saveState(); alert(`Added "${user}" to group "${g.name}"`); }
+    hideOverlay(collabOverlay);
+});
+
+// --- CONFIRM ---
+const confirmOverlay=document.getElementById('confirmOverlay');
+const confirmTitle=document.getElementById('confirmTitle');
+const confirmMessage=document.getElementById('confirmMessage');
+const confirmYes=document.getElementById('confirmYes');
+const confirmNo=document.getElementById('confirmNo');
+
+function confirmAction(message, callback){
+    pendingConfirm=callback; confirmTitle.textContent='Confirm'; confirmMessage.textContent=message;
+    showOverlay(confirmOverlay);
+}
+confirmYes.addEventListener('click', ()=> { if(pendingConfirm) pendingConfirm(); pendingConfirm=null; hideOverlay(confirmOverlay); });
+confirmNo.addEventListener('click', ()=> { pendingConfirm=null; hideOverlay(confirmOverlay); });
+
+// --- INIT ---
+loadState(); renderGroups(); renderTasks();
+</script>
+</body>
+</html>
