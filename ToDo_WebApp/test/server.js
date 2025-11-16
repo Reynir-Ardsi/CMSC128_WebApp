@@ -36,11 +36,11 @@ app.get("/tasks", async (req, res) => {
 // Get a single task
 app.get("/tasks/:id", async (req, res) => {
     try {
-    const task = await Task.findById(req.params.id);
-    if (!task) return res.status(404).json({ error: "Task not found" });
-    res.json(task);
+        const task = await Task.findById(req.params.id);
+        if (!task) return res.status(404).json({ error: "Task not found" });
+        res.json(task);
     } catch {
-    res.status(400).json({ error: "Invalid task ID" });
+        res.status(400).json({ error: "Invalid task ID" });
     }
 });
 
@@ -54,128 +54,141 @@ app.post("/tasks", async (req, res) => {
 // Update task
 app.put("/tasks/:id", async (req, res) => {
     try {
-    const task = await Task.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    if (!task) return res.status(404).json({ error: "Task not found" });
-    res.json(task);
+        const task = await Task.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        if (!task) return res.status(404).json({ error: "Task not found" });
+        res.json(task);
     } catch {
-    res.status(400).json({ error: "Invalid task ID" });
+        res.status(400).json({ error: "Invalid task ID" });
     }
 });
 
 // Delete task
 app.delete("/tasks/:id", async (req, res) => {
     try {
-    const task = await Task.findByIdAndDelete(req.params.id);
-    if (!task) return res.status(404).json({ error: "Task not found" });
-    res.json({ success: true });
+        const task = await Task.findByIdAndDelete(req.params.id);
+        if (!task) return res.status(404).json({ error: "Task not found" });
+        res.json({ success: true });
     } catch {
-    res.status(400).json({ error: "Invalid task ID" });
+        res.status(400).json({ error: "Invalid task ID" });
     }
 });
 
 //USER ACCOUNT MANAGEMENT
-
 const UserSchema = new mongoose.Schema({
     name: String,
     email: { type: String, unique: true },
     password: String,
+    securityQuestion: String,
+    securityAnswer: String // hashed
 });
 const User = mongoose.model("User", UserSchema);
 
 // Register
 app.post("/accounts/register", async (req, res) => {
     try {
-    const { name, email, password } = req.body;
-    const existing = await User.findOne({ email });
-    if (existing) return res.status(400).json({ error: "Email already exists" });
+        const { name, email, password, question, answer } = req.body;
+        const existing = await User.findOne({ email });
+        if (existing) return res.status(400).json({ error: "Email already exists" });
 
-    const hashed = await bcrypt.hash(password, 10);
-    const newUser = new User({ name, email, password: hashed });
-    await newUser.save();
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedAnswer = await bcrypt.hash(answer, 10);
 
-    res.json({ message: "User registered successfully" });
+        const newUser = new User({
+            name,
+            email,
+            password: hashedPassword,
+            securityQuestion: question,
+            securityAnswer: hashedAnswer
+        });
+
+        await newUser.save();
+        res.json({ message: "User registered successfully" });
     } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Error registering user" });
+        console.error(err);
+        res.status(500).json({ error: "Error registering user" });
     }
 });
 
 // Login
 app.post("/accounts/login", async (req, res) => {
     try {
-    const { email, password } = req.body;
+        const { email, password } = req.body;
 
-    const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ error: "User not found" });
+        const user = await User.findOne({ email });
+        if (!user) return res.status(400).json({ error: "User not found" });
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ error: "Invalid credentials" });
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) return res.status(400).json({ error: "Invalid credentials" });
 
-    res.json({ message: "Login successful", userId: user._id });
+        res.json({ message: "Login successful", userId: user._id });
     } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Error logging in" });
+        console.error(err);
+        res.status(500).json({ error: "Error logging in" });
     }
 });
 
-// Forgot password (mock)
+// Forgot password: return security question
 app.post("/accounts/forgot", async (req, res) => {
     try {
-    const { email } = req.body;
-    const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ error: "Email not found" });
+        const { email } = req.body;
+        const user = await User.findOne({ email });
+        if (!user) return res.status(404).json({ error: "Email not found" });
 
-    // (You can later integrate email sending with nodemailer or Twilio SendGrid)
-    res.json({ message: "Password reset link sent (mock)" });
+        res.json({ question: user.securityQuestion });
     } catch {
-    res.status(500).json({ error: "Error processing request" });
+        res.status(500).json({ error: "Error processing request" });
+    }
+});
+
+// Verify security answer
+app.post("/accounts/verify-security", async (req, res) => {
+    try {
+        const { email, answer } = req.body;
+        const user = await User.findOne({ email });
+        if (!user) return res.status(404).json({ error: "User not found" });
+
+        const isCorrect = await bcrypt.compare(answer, user.securityAnswer);
+        if (isCorrect) {
+            res.json({ success: true });
+        } else {
+            res.status(400).json({ success: false, error: "Incorrect answer" });
+        }
+    } catch {
+        res.status(500).json({ error: "Error verifying security answer" });
     }
 });
 
 // Get single user (for account_profile.html)
 app.get("/accounts/:id", async (req, res) => {
     try {
-    const user = await User.findById(req.params.id).select("-__v"); // exclude __v
-    if (!user) return res.status(404).json({ error: "User not found" });
-    res.json(user);
+        const user = await User.findById(req.params.id).select("-__v");
+        if (!user) return res.status(404).json({ error: "User not found" });
+        res.json(user);
     } catch (err) {
-    console.error(err);
-    res.status(400).json({ error: "Invalid user ID" });
+        console.error(err);
+        res.status(400).json({ error: "Invalid user ID" });
     }
 });
 
 // Update account (name, email, password)
 app.put("/accounts/:id", async (req, res) => {
     try {
-    const { name, email, password } = req.body;
-    const updateData = { name, email };
+        const { name, email, password } = req.body;
+        const updateData = { name, email };
 
-    if (password) {
-        updateData.password = await bcrypt.hash(password, 10);
-    }
+        if (password) {
+            updateData.password = await bcrypt.hash(password, 10);
+        }
 
-    const user = await User.findByIdAndUpdate(req.params.id, updateData, { new: true });
-    if (!user) return res.status(404).json({ error: "User not found" });
+        const user = await User.findByIdAndUpdate(req.params.id, updateData, { new: true });
+        if (!user) return res.status(404).json({ error: "User not found" });
 
-    res.json({ message: "Account updated successfully", user });
+        res.json({ message: "Account updated successfully", user });
     } catch (err) {
-    console.error(err);
-    res.status(400).json({ error: "Failed to update account" });
+        console.error(err);
+        res.status(400).json({ error: "Failed to update account" });
     }
 });
-
-// // Delete account
-// app.delete("/accounts/:id", async (req, res) => {
-//     try {
-//     const user = await User.findByIdAndDelete(req.params.id);
-//     if (!user) return res.status(404).json({ error: "User not found" });
-
-//     res.json({ message: "Account deleted successfully" });
-//     } catch (err) {
-//     console.error(err);
-//     res.status(400).json({ error: "Failed to delete account" });
-//     }
-// });
 
 //SERVER START
 app.listen(5000, () => console.log("🚀 Server running on port 5000"));
