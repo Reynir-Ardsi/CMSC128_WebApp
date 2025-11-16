@@ -168,10 +168,10 @@ button:hover {
         <input type="password" id="register-confirm" placeholder="Confirm Password" required />
         <select id="register-question" required>
             <option value="">Select a Security Question</option>
-            <option value="pet">What is your first pet’s name?</option>
-            <option value="school">What is the name of your elementary school?</option>
-            <option value="color">What is your favorite color?</option>
-            <option value="city">What city were you born in?</option>
+            <option value="What is your first pet’s name?">What is your first pet’s name?</option>
+            <option value="What is the name of your elementary school?">What is the name of your elementary school?</option>
+            <option value="What is your favorite color?">What is your favorite color?</option>
+            <option value="What city were you born in?">What city were you born in?</option>
         </select>
         <input type="text" id="register-answer" placeholder="Your Answer" required />
         <button type="submit">Sign Up</button>
@@ -184,7 +184,7 @@ button:hover {
 <!-- FORGOT PASSWORD OVERLAY -->
 <div class="overlay" id="forgetOverlay"></div>
 <div id="forget-container">
-    <h2>Reset Password</h2>
+    <h2 id="forget-title">Reset Password</h2>
     <form id="forgetForm">
         <input type="email" id="forget-email" placeholder="Enter your email" required />
         <button type="submit">Continue</button>
@@ -195,42 +195,194 @@ button:hover {
 </div>
 
 <script>
-const loginContainer = document.getElementById('login-container');
-const registerContainer = document.getElementById('register-container');
-const forgetContainer = document.getElementById('forget-container');
-const forgetOverlay = document.getElementById('forgetOverlay');
+// References
+const loginContainer = document.getElementById("login-container");
+const registerContainer = document.getElementById("register-container");
+const forgetContainer = document.getElementById("forget-container");
+const forgetOverlay = document.getElementById("forgetOverlay");
+const forgetForm = document.getElementById("forgetForm");
+const forgetTitle = document.getElementById("forget-title");
 
-// Show/hide containers
-document.getElementById('to-register').addEventListener('click', e => {
+// State
+let currentEmail = null;
+let securityQuestion = null;
+
+// --- PAGE SWITCHING ---
+document.getElementById("to-register").onclick = e => {
     e.preventDefault();
-    loginContainer.style.display = 'none';
-    registerContainer.style.display = 'block';
-});
+    loginContainer.style.display = "none";
+    registerContainer.style.display = "block";
+};
 
-document.getElementById('to-login').addEventListener('click', e => {
+document.getElementById("to-login").onclick = e => {
     e.preventDefault();
-    registerContainer.style.display = 'none';
-    loginContainer.style.display = 'block';
-});
+    registerContainer.style.display = "none";
+    loginContainer.style.display = "block";
+};
 
-// Forgot Password overlay
-document.getElementById('to-forget').addEventListener('click', e => {
+// Open forgot password overlay
+document.getElementById("to-forget").onclick = e => {
     e.preventDefault();
-    forgetContainer.classList.add('active');
-    forgetOverlay.style.display = 'block';
-});
+    forgetContainer.classList.add("active");
+    forgetOverlay.style.display = "block";
+    resetForgotForm();
+};
 
-document.getElementById('close-forget').addEventListener('click', e => {
+// Close overlay
+document.getElementById("close-forget").onclick = e => {
     e.preventDefault();
-    forgetContainer.classList.remove('active');
-    forgetOverlay.style.display = 'none';
-});
+    forgetContainer.classList.remove("active");
+    forgetOverlay.style.display = "none";
+};
 
-// Clicking on overlay also closes
-forgetOverlay.addEventListener('click', () => {
-    forgetContainer.classList.remove('active');
-    forgetOverlay.style.display = 'none';
-});
+forgetOverlay.onclick = () => {
+    forgetContainer.classList.remove("active");
+    forgetOverlay.style.display = "none";
+};
+
+// Reset form to email input
+function resetForgotForm() {
+    forgetTitle.innerText = "Reset Password";
+    forgetForm.innerHTML = `
+        <input type="email" id="forget-email" placeholder="Enter your email" required />
+        <button type="submit">Continue</button>
+    `;
+    currentEmail = null;
+    securityQuestion = null;
+    attachForgetFormListener();
+}
+
+// Attach submit listener
+function attachForgetFormListener() {
+    const form = document.getElementById("forgetForm");
+    form.onsubmit = async e => {
+        e.preventDefault();
+
+        // Step 1: Email stage
+        if (!currentEmail) {
+            const email = document.getElementById("forget-email").value.trim().toLowerCase();
+            if (!email) return alert("Please enter your email.");
+
+            try {
+                const res = await fetch("http://localhost:5000/accounts/forgot", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email })
+                });
+                const data = await res.json();
+
+                if (res.ok && data.question) {
+                    currentEmail = email;
+                    securityQuestion = data.question;
+                    showSecurityQuestion();
+                } else {
+                    alert("❌ " + (data.error || "Email not found"));
+                }
+            } catch (err) {
+                console.error(err);
+                alert("⚠️ Network error");
+            }
+        }
+        // Step 2: Security question stage
+        else {
+            const answer = document.getElementById("security-answer").value.trim().toLowerCase();
+            if (!answer) return alert("Please answer the security question.");
+
+            try {
+                const res = await fetch("http://localhost:5000/accounts/verify-security", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email: currentEmail, answer })
+                });
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    alert("✅ Correct! Redirecting to dashboard...");
+                    window.location.href = "todoDashboard.html";
+                } else {
+                    alert("❌ Incorrect answer. Try again.");
+                }
+            } catch (err) {
+                console.error(err);
+                alert("⚠️ Network error");
+            }
+        }
+    };
+}
+
+// Show security question in overlay
+function showSecurityQuestion() {
+    forgetTitle.innerText = "Security Question";
+    forgetForm.innerHTML = `
+        <div style="margin-bottom:12px;">${securityQuestion}</div>
+        <input type="text" id="security-answer" placeholder="Your Answer" required />
+        <button type="submit">Submit</button>
+    `;
+    attachForgetFormListener();
+}
+
+// --- LOGIN ---
+document.getElementById("loginForm").onsubmit = async e => {
+    e.preventDefault();
+    const email = document.getElementById("login-email").value.trim().toLowerCase();
+    const password = document.getElementById("login-password").value;
+
+    try {
+        const res = await fetch("http://localhost:5000/accounts/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (res.ok && data.userId) {
+            localStorage.setItem("userId", data.userId);
+            window.location.href = "todoDashboard.html";
+        } else {
+            alert("❌ " + (data.error || "Login failed"));
+        }
+    } catch (err) {
+        console.error(err);
+        alert("⚠️ Network error");
+    }
+};
+
+// --- REGISTER ---
+document.getElementById("registerForm").onsubmit = async e => {
+    e.preventDefault();
+    const name = document.getElementById("register-name").value.trim();
+    const email = document.getElementById("register-email").value.trim().toLowerCase();
+    const password = document.getElementById("register-password").value;
+    const confirm = document.getElementById("register-confirm").value;
+    const question = document.getElementById("register-question").value;
+    const answer = document.getElementById("register-answer").value.trim().toLowerCase();
+
+    if (password !== confirm) return alert("❌ Passwords do not match");
+
+    try {
+        const res = await fetch("http://localhost:5000/accounts/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name, email, password, question, answer })
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+            alert("✅ Account registered! Login now.");
+            registerContainer.style.display = "none";
+            loginContainer.style.display = "block";
+            document.getElementById("registerForm").reset();
+        } else {
+            alert("❌ " + (data.error || "Registration failed"));
+        }
+    } catch (err) {
+        console.error(err);
+        alert("⚠️ Network error");
+    }
+};
+
+// Attach listener for initial forgot password form
+attachForgetFormListener();
 </script>
+
 </body>
 </html>
