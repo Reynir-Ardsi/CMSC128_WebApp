@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Account Profile</title>
+<style>
+    body { font-family: Arial, sans-serif; background: linear-gradient(to right, #5b21b6, #7c3aed);
+    color: #fff; display:flex; justify-content:center; align-items:center; height:100vh; margin:0; }
+    .profile { background: rgba(0,0,0,0.6); border-radius:12px; padding:30px 40px; width:360px; text-align:center; box-shadow:0 4px 15px rgba(0,0,0,0.5); }
+    .profile h2 { margin-bottom:20px; color:#c4b5fd; }
+    input { width:100%; padding:10px; margin-bottom:12px; border:none; border-radius:6px; outline:none; font-size:14px; box-sizing:border-box; }
+    .password-row { display:flex; gap:8px; }
+    .password-row input { flex:1; padding:10px; }
+    .toggle-btn { padding:10px; border-radius:6px; border:none; background:#c4b5fd; color:#4c1d95; font-weight:bold; cursor:pointer; }
+    button { width:48%; padding:10px; margin:5px 1%; border:none; border-radius:6px; color:#fff; font-weight:bold; cursor:pointer; }
+    #saveBtn { background:#10b981; } #deleteBtn { background:#ef4444; } #logoutBtn { background:#6b21a8; width:94%; margin-top:10px; }
+    button:hover { opacity:0.95; }
+    .message { margin-bottom:12px; color:#d1fae5; font-weight:600; display:none; }
+</style>
+</head>
+<body>
+    <div class="profile">
+    <h2>Profile Settings</h2>
+    <div class="message" id="msg"></div>
+    <input type="text" id="name" placeholder="Full Name" />
+    <input type="email" id="email" placeholder="Email" disabled />
+    <div class="password-row">
+        <input type="password" id="password" placeholder="New Password (optional)" />
+        <button class="toggle-btn" id="togglePassword">Show</button>
+    </div>
+    <div>
+        <button id="saveBtn">Save Changes</button>
+        <button id="deleteBtn">Delete Account</button>
+    </div>
+    <button id="logoutBtn">Logout</button>
+    </div>
+
+    <script>
+    const API_BASE = 'http://localhost:5000';
+    const userId = localStorage.getItem('userId');
+    const msgEl = document.getElementById('msg');
+
+    function showMessage(text, timeout = 3000) {
+        msgEl.textContent = text;
+        msgEl.style.display = 'block';
+        setTimeout(()=> msgEl.style.display = 'none', timeout);
+    }
+
+    if (!userId) {
+        alert('Not logged in — redirecting to login.');
+        window.location.href = 'account.html';
+    } else {
+      // fetch user profile
+        (async () => {
+        try {
+            const res = await fetch(`${API_BASE}/accounts/${userId}`);
+            if (!res.ok) {
+            const err = await res.json().catch(()=>({ error: 'Unknown error' }));
+            alert('Failed to load profile: ' + (err.error || err.message || res.statusText));
+            localStorage.removeItem('userId');
+            window.location.href = 'account.html';
+            return;
+            }
+            const user = await res.json();
+            document.getElementById('name').value = user.name || '';
+            document.getElementById('email').value = user.email || '';
+          // For security we do NOT set the hashed password into the field.
+          // Leave password blank for user to enter a new one if they want.
+        } catch (err) {
+            console.error('Profile fetch error:', err);
+            alert('Network error while loading profile.');
+        }
+        })();
+    }
+
+    // Toggle show/hide text
+    const pwdInput = document.getElementById('password');
+    const toggleBtn = document.getElementById('togglePassword');
+    toggleBtn.addEventListener('click', () => {
+        if (pwdInput.type === 'password') { pwdInput.type = 'text'; toggleBtn.textContent = 'Hide'; }
+        else { pwdInput.type = 'password'; toggleBtn.textContent = 'Show'; }
+    });
+
+    // Save changes
+    document.getElementById('saveBtn').onclick = async () => {
+        const name = document.getElementById('name').value.trim();
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+
+        try {
+        const res = await fetch(`${API_BASE}/accounts/${userId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, email, password })
+        });
+        const data = await res.json().catch(()=>({}));
+        if (res.ok) {
+            showMessage('Profile updated successfully!');
+            document.getElementById('password').value = '';
+        } else {
+            alert('Update failed: ' + (data.error || data.message || 'Unknown'));
+        }
+        } catch (err) {
+        console.error('Update error:', err);
+        alert('Network error while updating profile.');
+        }
+    };
+
+// "Delete" account (frontend only)
+document.getElementById('deleteBtn').onclick = async () => {
+    if (!confirm('Are you sure you want to delete your account?')) return;
+
+    // Simulate deletion (frontend only)
+    alert('Your account has been marked for deletion (frontend only).');
+
+    // Clear session and redirect to login
+    localStorage.removeItem('userId');
+    window.location.href = 'account.html';
+};
+
+    // Logout
+    document.getElementById('logoutBtn').onclick = () => {
+        localStorage.removeItem('userId');
+        window.location.href = 'account.html';
+    };
+</script>
+</body>
+</html>

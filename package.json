@@ -1,0 +1,20 @@
+{
+  "name": "cmsc128_webapp",
+  "version": "1.0.0",
+  "description": "ToDo List_WebApp",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Reynir-Ardsi/CMSC128_WebApp.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Reynir-Ardsi/CMSC128_WebApp/issues"
+  },
+  "homepage": "https://github.com/Reynir-Ardsi/CMSC128_WebApp#readme"
+}
