@@ -13,6 +13,8 @@
         --accent: #3b82f6;
         --text: #F1F5F9;
         --muted-text: #94A3B8;
+        --input-bg: #0F172A;
+        --border: #334155;
         --success: #22C55E;
         --danger: #EF4444;
         --shadow: rgba(0, 0, 0, 0.6);
@@ -34,11 +36,12 @@
         border-radius: 14px;
         padding: 30px 40px;
         width: 360px;
-        text-align: center;
         box-shadow: 0 4px 20px var(--shadow);
     }
 
     .profile h2 {
+        margin-top: 0;
+        text-align: center;
         margin-bottom: 20px;
         color: var(--text);
         letter-spacing: 0.5px;
@@ -48,15 +51,15 @@
         width: 100%;
         padding: 10px;
         margin-bottom: 12px;
-        border: 1px solid #334155;
+        border: 1px solid var(--border);
         border-radius: 8px;
-        background: #0F172A;
+        background: var(--input-bg);
         color: var(--text);
         outline: none;
         font-size: 14px;
         transition: border 0.2s, background 0.2s;
         box-sizing: border-box;
-        appearance: none; /* for dropdown arrows */
+        appearance: none;
     }
 
     input:focus,
@@ -69,24 +72,30 @@
         display: flex;
         gap: 8px;
     }
-
+    
+    /* --- THIS IS THE CHANGE --- */
+    /* Blue Toggle Button */
     .toggle-btn {
-        padding: 10px;
+        padding: 0 12px;
         border-radius: 8px;
-        border: none;
-        background: var(--accent);
-        color: #fff;
+        border: 1px solid var(--primary); /* Changed */
+        background: var(--primary); /* Changed */
+        color: var(--text); /* Changed */
         font-weight: 600;
         cursor: pointer;
-        transition: background 0.2s, transform 0.1s;
-        height: 37px;
+        transition: background 0.2s, transform 0.1s, color 0.2s, border-color 0.2s;
+        height: 39px; /* Match input height */
         flex-shrink: 0;
     }
 
     .toggle-btn:hover {
-        background: #0EA5E9;
-        transform: translateY(-1px);
+        background: var(--primary-hover); /* Changed */
+        border-color: var(--primary-hover); /* Added */
+        color: var(--text);
+        transform: translateY(-1px); /* Added */
     }
+    /* --- END OF CHANGE --- */
+
 
     /* --- BUTTONS --- */
     .button-group {
@@ -104,7 +113,7 @@
         color: #fff;
         font-weight: 600;
         cursor: pointer;
-        transition: opacity 0.2s, transform 0.1s;
+        transition: opacity 0.2s, transform 0.1s, background 0.2s;
         height: 44px;
     }
 
@@ -113,33 +122,105 @@
         transform: translateY(-1px);
     }
 
+    /* Disabled state for buttons */
+    button:disabled {
+        background: #2a3a50 !important;
+        color: #5d6d85 !important;
+        cursor: not-allowed;
+        transform: none !important;
+        opacity: 1 !important;
+    }
+
     #saveBtn { background: var(--success); }
     #deleteBtn { background: var(--danger); }
     #logoutBtn { background: var(--primary); width: 100%; margin-top: 12px; }
     #logoutBtn:hover { background: var(--primary-hover); }
 
-    .message {
-        margin-bottom: 12px;
-        color: var(--success);
+    .btn-danger {
+        background: var(--danger);
+    }
+    
+    /* Real-time validation message */
+    .validation-message {
+        color: var(--danger);
+        font-size: 13px;
+        text-align: left;
+        margin-top: -8px;
+        margin-bottom: 8px;
+        display: none; /* Hidden by default */
+    }
+
+    /* --- TOAST NOTIFICATION --- */
+    #toast {
+        position: fixed;
+        bottom: -100px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 14px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 16px var(--shadow);
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        transition: bottom 0.4s ease;
+        z-index: 10000;
         font-weight: 600;
+    }
+    #toast.show { bottom: 24px; }
+    #toast.success { background: var(--success); color: #042014; }
+    #toast.error { background: var(--danger); color: var(--text); }
+    #toast.info { background: var(--primary); color: var(--text); }
+
+    /* --- CONFIRMATION MODAL --- */
+    .overlay {
+        position: fixed;
+        inset: 0;
         display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0,0,0,0.6);
+        z-index: 999;
+    }
+    .overlay.show { display: flex; }
+    .modal {
+        background: linear-gradient(180deg, var(--surface), #0c1b2b);
+        box-shadow: 0 10px 30px var(--shadow);
+        padding: 24px;
+        border-radius: 12px;
+        width: 340px;
+        text-align: center;
+    }
+    .modal h3 { margin: 0 0 12px 0; }
+    .modal .modal-message {
+        color: var(--muted-text);
+        margin-bottom: 20px;
+        line-height: 1.5;
+    }
+    .modal .button-group { margin: 0; }
+    .btn-ghost {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--muted-text);
+    }
+    .btn-ghost:hover {
+        background: var(--border);
+        color: var(--text);
     }
 </style>
 </head>
 <body>
     <div class="profile">
         <h2>Profile Settings</h2>
-        <div class="message" id="msg"></div>
         
         <input type="text" id="name" placeholder="Full Name" />
         <input type="email" id="email" placeholder="Email" />
+        <div class="validation-message" id="emailError">Please enter a valid email address.</div>
 
         <div class="password-row">
             <input type="password" id="password" placeholder="New Password (optional)" />
             <button class="toggle-btn" id="togglePassword">Show</button>
         </div>
 
-        <!-- Security Question Dropdown -->
         <select id="securityQuestion">
             <option value="">Select a Security Question</option>
             <option value="pet">What is your first pet’s name?</option>
@@ -148,7 +229,6 @@
             <option value="city">What city were you born in?</option>
         </select>
 
-        <!-- Security Answer with toggle -->
         <div class="answer-row">
             <input type="password" id="securityAnswer" placeholder="Answer" />
             <button class="toggle-btn" id="toggleAnswer">Show</button>
@@ -161,10 +241,111 @@
         <button id="logoutBtn">Logout</button>
     </div>
 
+    <div id="toast">
+        <span id="toastMessage"></span>
+    </div>
+
+    <div class="overlay" id="confirmOverlay">
+        <div class="modal">
+            <h3 id="confirmTitle">Confirm Action</h3>
+            <div class="modal-message" id="confirmMessage">Are you sure?</div>
+            <div class="button-group">
+                <button id="confirmNo" class="btn-ghost">Cancel</button>
+                <button id="confirmYes" class="btn-danger">Yes, Delete</button>
+            </div>
+        </div>
+    </div>
+
 <script>
-    // Show/Hide Password
+    // --- ELEMENT REFERENCES ---
+    const nameField = document.getElementById('name');
+    const emailField = document.getElementById('email');
+    const emailError = document.getElementById('emailError');
     const passwordField = document.getElementById('password');
     const togglePasswordBtn = document.getElementById('togglePassword');
+    const questionField = document.getElementById('securityQuestion');
+    const answerField = document.getElementById('securityAnswer');
+    const toggleAnswerBtn = document.getElementById('toggleAnswer');
+    const saveBtn = document.getElementById('saveBtn');
+    
+    let toastTimeout = null;
+    let pendingConfirm = null;
+
+    // --- TOAST NOTIFICATION ---
+    const toastEl = document.getElementById('toast');
+    const toastMessage = document.getElementById('toastMessage');
+
+    function showToast(message, type = 'info', duration = 3000) {
+        toastMessage.textContent = message;
+        toastEl.className = ''; // Reset
+        toastEl.classList.add(type);
+        toastEl.classList.add('show');
+
+        if (toastTimeout) clearTimeout(toastTimeout);
+        
+        if (duration > 0) {
+            toastTimeout = setTimeout(() => {
+                toastEl.classList.remove('show');
+            }, duration);
+        }
+    }
+
+    // --- CONFIRMATION MODAL ---
+    const confirmOverlay = document.getElementById('confirmOverlay');
+    const confirmTitle = document.getElementById('confirmTitle');
+    const confirmMessage = document.getElementById('confirmMessage');
+
+    function showConfirm(title, message, callback) {
+        confirmTitle.textContent = title;
+        confirmMessage.textContent = message;
+        pendingConfirm = callback;
+        confirmOverlay.classList.add('show');
+    }
+
+    document.getElementById('confirmYes').addEventListener('click', () => {
+        if (pendingConfirm) pendingConfirm();
+        pendingConfirm = null;
+        confirmOverlay.classList.remove('show');
+    });
+
+    document.getElementById('confirmNo').addEventListener('click', () => {
+        pendingConfirm = null;
+        confirmOverlay.classList.remove('show');
+    });
+
+    // --- FORM VALIDATION ---
+    function validateEmail(email) {
+        const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+        return re.test(String(email).toLowerCase());
+    }
+
+    // Fields required for saving (password is optional)
+    const requiredFields = [nameField, emailField, questionField, answerField];
+
+    function validateForm() {
+        let isValid = true;
+        
+        if (nameField.value.trim() === '') isValid = false;
+        if (questionField.value === '') isValid = false;
+        if (answerField.value.trim() === '') isValid = false;
+
+        const email = emailField.value.trim();
+        if (email === '' || !validateEmail(email)) {
+            isValid = false;
+            emailError.style.display = (email !== '' && !validateEmail(email)) ? 'block' : 'none';
+        } else {
+            emailError.style.display = 'none';
+        }
+
+        saveBtn.disabled = !isValid;
+    }
+
+    // Add event listeners for validation
+    requiredFields.forEach(field => {
+        field.addEventListener('input', validateForm);
+    });
+
+    // --- BUTTON ACTIONS ---
     togglePasswordBtn.addEventListener('click', () => {
         if (passwordField.type === 'password') {
             passwordField.type = 'text';
@@ -175,9 +356,6 @@
         }
     });
 
-    // Show/Hide Security Answer
-    const answerField = document.getElementById('securityAnswer');
-    const toggleAnswerBtn = document.getElementById('toggleAnswer');
     toggleAnswerBtn.addEventListener('click', () => {
         if (answerField.type === 'password') {
             answerField.type = 'text';
@@ -188,41 +366,113 @@
         }
     });
 
-    const msg = document.getElementById('msg');
-
     // Save Changes
-    document.getElementById('saveBtn').addEventListener('click', () => {
-        const name = document.getElementById('name').value.trim();
-        const email = document.getElementById('email').value.trim();
-        const password = passwordField.value;
-        const securityQuestion = document.getElementById('securityQuestion').value;
-        const securityAnswer = answerField.value;
+    saveBtn.addEventListener('click', async () => {
+        const name = nameField.value.trim();
+        const email = emailField.value.trim();
+        const password = passwordField.value; // Send empty string if no change
+        const securityQuestion = questionField.value;
+        const securityAnswer = answerField.value.trim();
 
-        console.log({ name, email, password, securityQuestion, securityAnswer });
+        const body = { name, email, securityQuestion, answer: securityAnswer };
+        
+        // Only add password to request if user typed one
+        if (password) {
+            body.password = password;
+        }
 
-        msg.textContent = 'Changes saved successfully!';
-        msg.style.display = 'block';
-        msg.style.color = 'var(--success)';
-        setTimeout(() => msg.style.display = 'none', 2500);
+        try {
+            const res = await fetch('http://localhost:5000/accounts/profile', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include', // Send cookies
+                body: JSON.stringify(body)
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                showToast('Changes saved successfully!', 'success');
+                passwordField.value = ''; // Clear password field
+                // Re-validate in case email was fixed
+                validateForm();
+            } else {
+                 showToast(`Error: ${data.error}`, 'error');
+            }
+        } catch (err) {
+            showToast('Network error', 'error');
+        }
     });
 
     // Delete Account
     document.getElementById('deleteBtn').addEventListener('click', () => {
-        if(confirm('Are you sure you want to delete your account?')){
-            msg.textContent = 'Account deleted.';
-            msg.style.display = 'block';
-            msg.style.color = 'var(--danger)';
-            setTimeout(() => msg.style.display = 'none', 2500);
-        }
+        showConfirm('Delete Account', 'Are you sure you want to delete your account? This action cannot be undone.', async () => {
+            try {
+                const res = await fetch('http://localhost:5000/accounts/profile', {
+                    method: 'DELETE',
+                    credentials: 'include' // Send cookies
+                });
+                
+                if (res.ok) {
+                    showToast('Account deleted. Logging out...', 'error', 2500);
+                    setTimeout(() => window.location.href = 'login.html', 2500);
+                } else {
+                    const data = await res.json();
+                    showToast(`Error: ${data.error}`, 'error');
+                }
+            } catch (err) {
+                 showToast('Network error', 'error');
+            }
+        });
     });
 
     // Logout
-    document.getElementById('logoutBtn').addEventListener('click', () => {
-        msg.textContent = 'Logging out...';
-        msg.style.display = 'block';
-        msg.style.color = 'var(--accent)';
-        setTimeout(() => msg.style.display = 'none', 2000);
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+        try {
+            await fetch('http://localhost:5000/accounts/logout', {
+                method: 'POST',
+                credentials: 'include' // Send cookies
+            });
+            showToast('Logging out...', 'info', 1500);
+            setTimeout(() => window.location.href = 'login.html', 1500);
+        } catch (err) {
+            showToast('Network error', 'error');
+        }
     });
+
+    // --- INITIALIZE / LOAD DATA ---
+    async function loadProfile() {
+        try {
+            const res = await fetch('http://localhost:5000/accounts/profile', {
+                method: 'GET',
+                credentials: 'include' // Send cookies
+            });
+            
+            if (res.status === 401) {
+                // Not logged in, redirect
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            const data = await res.json();
+            
+            if (res.ok) {
+                nameField.value = data.name;
+                emailField.value = data.email;
+                questionField.value = data.securityQuestion;
+                // We don't load the answer field for security
+                // User must re-type answer to save changes
+                validateForm(); 
+            } else {
+                 showToast(`Error: ${data.error}`, 'error');
+            }
+        } catch (err) {
+            // Can't connect to backend, probably not logged in
+            window.location.href = 'login.html';
+        }
+    }
+    
+    // Load profile data when page loads
+    window.onload = loadProfile;
 </script>
 </body>
 </html>

@@ -140,11 +140,45 @@ button:hover {
     transform: translate(-50%, -50%) translateY(0);
     pointer-events: auto;
 }
+
+/* --- NEW: Custom Alert Popup --- */
+#alertOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1900; /* Above forget overlay */
+    display: none;
+}
+
+#alert-container {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) translateY(15px);
+    z-index: 2000; /* Above everything */
+    width: 340px;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px var(--shadow);
+    padding: 32px;
+    background: var(--surface);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    text-align: center;
+}
+
+#alert-container.active {
+    opacity: 1;
+    transform: translate(-50%, -50%) translateY(0);
+    pointer-events: auto;
+}
 </style>
 </head>
 <body>
 
-<!-- LOGIN -->
 <div id="login-container" class="container">
     <h2>Login</h2>
     <form id="loginForm">
@@ -158,7 +192,6 @@ button:hover {
     </div>
 </div>
 
-<!-- REGISTER -->
 <div id="register-container" class="container" style="display:none;">
     <h2>Register</h2>
     <form id="registerForm">
@@ -181,7 +214,6 @@ button:hover {
     </div>
 </div>
 
-<!-- FORGOT PASSWORD OVERLAY -->
 <div class="overlay" id="forgetOverlay"></div>
 <div id="forget-container">
     <h2 id="forget-title">Reset Password</h2>
@@ -193,6 +225,14 @@ button:hover {
         <a href="#" id="close-forget">Back to Login</a>
     </div>
 </div>
+
+<div class="overlay" id="alertOverlay"></div>
+<div id="alert-container">
+    <h2 id="alert-title">Notification</h2>
+    <div id="alert-message" style="margin-bottom: 20px; line-height: 1.6; color: var(--text-secondary);"></div>
+    <button id="alert-close-btn" style="width: 100%;">OK</button>
+</div>
+
 
 <script>
 // References
@@ -206,6 +246,55 @@ const forgetTitle = document.getElementById("forget-title");
 // State
 let currentEmail = null;
 let securityQuestion = null;
+
+// --- NEW: POPUP MODAL ---
+const alertContainer = document.getElementById("alert-container");
+const alertOverlay = document.getElementById("alertOverlay");
+const alertTitle = document.getElementById("alert-title");
+const alertMessage = document.getElementById("alert-message");
+const alertCloseBtn = document.getElementById("alert-close-btn");
+
+let onPopupClose = null; // Store callback
+
+/**
+ * Shows the custom popup.
+ * @param {string} message The message to display.
+ * @param {string} type 'info', 'success', or 'error'
+ * @param {function} onClose Optional callback function to run when closed.
+ */
+function showPopup(message, type = 'info', onClose = null) {
+    if (type === 'error') {
+        alertTitle.innerText = "Error";
+        alertMessage.style.color = "#F87171"; // Red-ish
+    } else if (type === 'success') {
+        alertTitle.innerText = "Success";
+        alertMessage.style.color = "#34D399"; // Green-ish
+    } else {
+        alertTitle.innerText = "Notification";
+        alertMessage.style.color = "var(--text-secondary)";
+    }
+
+    alertMessage.innerHTML = message;
+    onPopupClose = onClose; // Store the callback
+
+    alertOverlay.style.display = "block";
+    alertContainer.classList.add("active");
+}
+
+function closePopup() {
+    alertOverlay.style.display = "none";
+    alertContainer.classList.remove("active");
+    
+    // If a callback exists, run it after closing
+    if (onPopupClose) {
+        onPopupClose();
+        onPopupClose = null; // Clear it after running
+    }
+}
+
+// Wire up close events for the popup
+alertCloseBtn.onclick = closePopup;
+alertOverlay.onclick = closePopup;
 
 // --- PAGE SWITCHING ---
 document.getElementById("to-register").onclick = e => {
@@ -261,7 +350,7 @@ function attachForgetFormListener() {
         // Step 1: Email stage
         if (!currentEmail) {
             const email = document.getElementById("forget-email").value.trim().toLowerCase();
-            if (!email) return alert("Please enter your email.");
+            if (!email) return showPopup("Please enter your email.", "error");
 
             try {
                 const res = await fetch("http://localhost:5000/accounts/forgot", {
@@ -276,17 +365,17 @@ function attachForgetFormListener() {
                     securityQuestion = data.question;
                     showSecurityQuestion();
                 } else {
-                    alert("❌ " + (data.error || "Email not found"));
+                    showPopup("❌ " + (data.error || "Email not found"), "error");
                 }
             } catch (err) {
                 console.error(err);
-                alert("⚠️ Network error");
+                showPopup("⚠️ Network error", "error");
             }
         }
         // Step 2: Security question stage
         else {
             const answer = document.getElementById("security-answer").value.trim().toLowerCase();
-            if (!answer) return alert("Please answer the security question.");
+            if (!answer) return showPopup("Please answer the security question.", "error");
 
             try {
                 const res = await fetch("http://localhost:5000/accounts/verify-security", {
@@ -297,14 +386,16 @@ function attachForgetFormListener() {
                 const data = await res.json();
 
                 if (res.ok && data.success) {
-                    alert("✅ Correct! Redirecting to dashboard...");
-                    window.location.href = "todoDashboard.html";
+                    // Use callback to redirect only after user clicks "OK"
+                    showPopup("✅ Correct! Redirecting to dashboard...", "success", () => {
+                        window.location.href = "todoDashboard.html";
+                    });
                 } else {
-                    alert("❌ Incorrect answer. Try again.");
+                    showPopup("❌ Incorrect answer. Try again.", "error");
                 }
             } catch (err) {
                 console.error(err);
-                alert("⚠️ Network error");
+                showPopup("⚠️ Network error", "error");
             }
         }
     };
@@ -338,11 +429,11 @@ document.getElementById("loginForm").onsubmit = async e => {
             localStorage.setItem("userId", data.userId);
             window.location.href = "todoDashboard.html";
         } else {
-            alert("❌ " + (data.error || "Login failed"));
+            showPopup("❌ " + (data.error || "Login failed"), "error");
         }
     } catch (err) {
         console.error(err);
-        alert("⚠️ Network error");
+        showPopup("⚠️ Network error", "error");
     }
 };
 
@@ -356,7 +447,7 @@ document.getElementById("registerForm").onsubmit = async e => {
     const question = document.getElementById("register-question").value;
     const answer = document.getElementById("register-answer").value.trim().toLowerCase();
 
-    if (password !== confirm) return alert("❌ Passwords do not match");
+    if (password !== confirm) return showPopup("❌ Passwords do not match", "error");
 
     try {
         const res = await fetch("http://localhost:5000/accounts/register", {
@@ -367,16 +458,18 @@ document.getElementById("registerForm").onsubmit = async e => {
         const data = await res.json();
 
         if (res.ok) {
-            alert("✅ Account registered! Login now.");
-            registerContainer.style.display = "none";
-            loginContainer.style.display = "block";
-            document.getElementById("registerForm").reset();
+            // Use callback to switch to login only after user clicks "OK"
+            showPopup("✅ Account registered! Login now.", "success", () => {
+                registerContainer.style.display = "none";
+                loginContainer.style.display = "block";
+                document.getElementById("registerForm").reset();
+            });
         } else {
-            alert("❌ " + (data.error || "Registration failed"));
+            showPopup("❌ " + (data.error || "Registration failed"), "error");
         }
     } catch (err) {
         console.error(err);
-        alert("⚠️ Network error");
+        showPopup("⚠️ Network error", "error");
     }
 };
 
