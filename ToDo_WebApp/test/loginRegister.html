@@ -232,69 +232,12 @@ button:hover {
     <div id="alert-message" style="margin-bottom: 20px; line-height: 1.6; color: var(--text-secondary);"></div>
     <button id="alert-close-btn" style="width: 100%;">OK</button>
 </div>
-
-
 <script>
 // References
 const loginContainer = document.getElementById("login-container");
 const registerContainer = document.getElementById("register-container");
 const forgetContainer = document.getElementById("forget-container");
 const forgetOverlay = document.getElementById("forgetOverlay");
-const forgetForm = document.getElementById("forgetForm");
-const forgetTitle = document.getElementById("forget-title");
-
-// State
-let currentEmail = null;
-let securityQuestion = null;
-
-// --- NEW: POPUP MODAL ---
-const alertContainer = document.getElementById("alert-container");
-const alertOverlay = document.getElementById("alertOverlay");
-const alertTitle = document.getElementById("alert-title");
-const alertMessage = document.getElementById("alert-message");
-const alertCloseBtn = document.getElementById("alert-close-btn");
-
-let onPopupClose = null; // Store callback
-
-/**
- * Shows the custom popup.
- * @param {string} message The message to display.
- * @param {string} type 'info', 'success', or 'error'
- * @param {function} onClose Optional callback function to run when closed.
- */
-function showPopup(message, type = 'info', onClose = null) {
-    if (type === 'error') {
-        alertTitle.innerText = "Error";
-        alertMessage.style.color = "#F87171"; // Red-ish
-    } else if (type === 'success') {
-        alertTitle.innerText = "Success";
-        alertMessage.style.color = "#34D399"; // Green-ish
-    } else {
-        alertTitle.innerText = "Notification";
-        alertMessage.style.color = "var(--text-secondary)";
-    }
-
-    alertMessage.innerHTML = message;
-    onPopupClose = onClose; // Store the callback
-
-    alertOverlay.style.display = "block";
-    alertContainer.classList.add("active");
-}
-
-function closePopup() {
-    alertOverlay.style.display = "none";
-    alertContainer.classList.remove("active");
-    
-    // If a callback exists, run it after closing
-    if (onPopupClose) {
-        onPopupClose();
-        onPopupClose = null; // Clear it after running
-    }
-}
-
-// Wire up close events for the popup
-alertCloseBtn.onclick = closePopup;
-alertOverlay.onclick = closePopup;
 
 // --- PAGE SWITCHING ---
 document.getElementById("to-register").onclick = e => {
@@ -309,173 +252,88 @@ document.getElementById("to-login").onclick = e => {
     loginContainer.style.display = "block";
 };
 
-// Open forgot password overlay
+// --- (Forgot Password is disabled for now) ---
+// We need to add new routes to server.js to fix this.
 document.getElementById("to-forget").onclick = e => {
     e.preventDefault();
-    forgetContainer.classList.add("active");
-    forgetOverlay.style.display = "block";
-    resetForgotForm();
+    alert("Forgot Password logic needs to be updated on the server.");
 };
-
-// Close overlay
 document.getElementById("close-forget").onclick = e => {
     e.preventDefault();
-    forgetContainer.classList.remove("active");
-    forgetOverlay.style.display = "none";
 };
+forgetOverlay.onclick = () => {};
 
-forgetOverlay.onclick = () => {
-    forgetContainer.classList.remove("active");
-    forgetOverlay.style.display = "none";
-};
 
-// Reset form to email input
-function resetForgotForm() {
-    forgetTitle.innerText = "Reset Password";
-    forgetForm.innerHTML = `
-        <input type="email" id="forget-email" placeholder="Enter your email" required />
-        <button type="submit">Continue</button>
-    `;
-    currentEmail = null;
-    securityQuestion = null;
-    attachForgetFormListener();
-}
-
-// Attach submit listener
-function attachForgetFormListener() {
-    const form = document.getElementById("forgetForm");
-    form.onsubmit = async e => {
-        e.preventDefault();
-
-        // Step 1: Email stage
-        if (!currentEmail) {
-            const email = document.getElementById("forget-email").value.trim().toLowerCase();
-            if (!email) return showPopup("Please enter your email.", "error");
-
-            try {
-                const res = await fetch("http://localhost:5000/accounts/forgot", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ email })
-                });
-                const data = await res.json();
-
-                if (res.ok && data.question) {
-                    currentEmail = email;
-                    securityQuestion = data.question;
-                    showSecurityQuestion();
-                } else {
-                    showPopup("❌ " + (data.error || "Email not found"), "error");
-                }
-            } catch (err) {
-                console.error(err);
-                showPopup("⚠️ Network error", "error");
-            }
-        }
-        // Step 2: Security question stage
-        else {
-            const answer = document.getElementById("security-answer").value.trim().toLowerCase();
-            if (!answer) return showPopup("Please answer the security question.", "error");
-
-            try {
-                const res = await fetch("http://localhost:5000/accounts/verify-security", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ email: currentEmail, answer })
-                });
-                const data = await res.json();
-
-                if (res.ok && data.success) {
-                    // Use callback to redirect only after user clicks "OK"
-                    showPopup("✅ Correct! Redirecting to dashboard...", "success", () => {
-                        window.location.href = "todoDashboard.html";
-                    });
-                } else {
-                    showPopup("❌ Incorrect answer. Try again.", "error");
-                }
-            } catch (err) {
-                console.error(err);
-                showPopup("⚠️ Network error", "error");
-            }
-        }
-    };
-}
-
-// Show security question in overlay
-function showSecurityQuestion() {
-    forgetTitle.innerText = "Security Question";
-    forgetForm.innerHTML = `
-        <div style="margin-bottom:12px;">${securityQuestion}</div>
-        <input type="text" id="security-answer" placeholder="Your Answer" required />
-        <button type="submit">Submit</button>
-    `;
-    attachForgetFormListener();
-}
-
-// --- LOGIN ---
+// --- LOGIN (THE MAIN FIX) ---
 document.getElementById("loginForm").onsubmit = async e => {
     e.preventDefault();
     const email = document.getElementById("login-email").value.trim().toLowerCase();
     const password = document.getElementById("login-password").value;
 
     try {
-        const res = await fetch("http://localhost:5000/accounts/login", {
+        // 1. Call the NEW /auth/login route
+        const res = await fetch("http://localhost:5000/auth/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email, password })
         });
         const data = await res.json();
-        if (res.ok && data.userId) {
-            localStorage.setItem("userId", data.userId);
+        
+        // 2. Check for the TOKEN
+        if (res.ok && data.token) {
+            // 3. SAVE THE TOKEN
+            localStorage.setItem("token", data.token);
+            localStorage.setItem("userId", data.userId); // Still useful for profile page
+            
+            // 4. Redirect to dashboard
             window.location.href = "todoDashboard.html";
         } else {
-            showPopup("❌ " + (data.error || "Login failed"), "error");
+            alert("❌ " + (data.error || "Login failed"));
         }
     } catch (err) {
         console.error(err);
-        showPopup("⚠️ Network error", "error");
+        alert("⚠️ Network error");
     }
 };
 
-// --- REGISTER ---
+// --- REGISTER (UPDATED) ---
 document.getElementById("registerForm").onsubmit = async e => {
     e.preventDefault();
     const name = document.getElementById("register-name").value.trim();
     const email = document.getElementById("register-email").value.trim().toLowerCase();
     const password = document.getElementById("register-password").value;
     const confirm = document.getElementById("register-confirm").value;
-    const question = document.getElementById("register-question").value;
-    const answer = document.getElementById("register-answer").value.trim().toLowerCase();
+    
+    // Note: The JWT server doesn't use security questions by default
+    // We can add them back, but for now, let's just register.
+    // const question = document.getElementById("register-question").value;
+    // const answer = document.getElementById("register-answer").value.trim().toLowerCase();
 
-    if (password !== confirm) return showPopup("❌ Passwords do not match", "error");
+    if (password !== confirm) return alert("❌ Passwords do not match");
 
     try {
-        const res = await fetch("http://localhost:5000/accounts/register", {
+        // 1. Call the NEW /auth/register route
+        const res = await fetch("http://localhost:5000/auth/register", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name, email, password, question, answer })
+            // 2. Send the new simple payload
+            body: JSON.stringify({ name, email, password })
         });
         const data = await res.json();
 
         if (res.ok) {
-            // Use callback to switch to login only after user clicks "OK"
-            showPopup("✅ Account registered! Login now.", "success", () => {
-                registerContainer.style.display = "none";
-                loginContainer.style.display = "block";
-                document.getElementById("registerForm").reset();
-            });
+            alert("✅ Account registered! Login now.");
+            registerContainer.style.display = "none";
+            loginContainer.style.display = "block";
+            document.getElementById("registerForm").reset();
         } else {
-            showPopup("❌ " + (data.error || "Registration failed"), "error");
+            alert("❌ " + (data.error || "Registration failed"));
         }
     } catch (err) {
         console.error(err);
-        showPopup("⚠️ Network error", "error");
+        alert("⚠️ Network error");
     }
 };
-
-// Attach listener for initial forgot password form
-attachForgetFormListener();
 </script>
-
 </body>
 </html>
