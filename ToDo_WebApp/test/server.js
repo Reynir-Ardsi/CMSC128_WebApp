@@ -134,9 +134,53 @@ app.post("/accounts/forgot", async (req, res) => {
         const user = await User.findOne({ email });
         if (!user) return res.status(404).json({ error: "Email not found" });
 
+<<<<<<< Updated upstream
         res.json({ question: user.securityQuestion });
     } catch {
         res.status(500).json({ error: "Error processing request" });
+=======
+// --- DASHBOARD API ROUTES (Protected) ---
+const apiRouter = express.Router();
+app.use("/api", isAuthenticated, apiRouter); // Protect all /api routes
+
+// GET /api/data
+apiRouter.get("/data", async (req, res) => {
+  try {
+    const userId = req.userId; // <-- CHANGED
+    const userGroups = await Group.find({ $or: [{ owner: userId }, { collaborators: userId }] });
+    const groupIds = userGroups.map((g) => g._id);
+    const userTasks = await Task.find({ $or: [{ owner: userId }, { group: { $in: groupIds } }] });
+    const cleanGroups = userGroups.map(doc => ({ ...doc.toObject(), id: doc._id.toString() }));
+    const cleanTasks = userTasks.map(doc => ({ ...doc.toObject(), id: doc._id, group: doc.group ? doc.group.toString() : null }));
+    res.json({ groups: cleanGroups, tasks: cleanTasks });
+  } catch (err) {
+    console.error("GET /api/data Error:", err);
+    res.status(500).json({ error: "Failed to fetch data" });
+  }
+});
+
+// --- Group Routes ---
+apiRouter.post("/groups", async (req, res) => {
+  try {
+    const { name, type } = req.body;
+    const ownerId = req.userId; // <-- CHANGED
+    const group = new Group({ name, type, owner: ownerId, collaborators: type === "collab" ? [ownerId] : [] });
+    await group.save();
+    res.status(201).json({ ...group.toObject(), id: group._id });
+  } catch (err) {
+    console.error("POST /api/groups Error:", err);
+    res.status(500).json({ error: "Failed to create group" });
+  }
+});
+
+apiRouter.delete("/groups/:id", async (req, res) => {
+  try {
+    const groupId = req.params.id;
+    const userId = req.userId; // <-- CHANGED
+    const group = await Group.findOne({ _id: groupId, owner: userId });
+    if (!group) {
+      return res.status(403).json({ error: "You are not the owner of this group" });
+>>>>>>> Stashed changes
     }
 });
 
