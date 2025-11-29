@@ -72,6 +72,7 @@ const isAuthenticated = (req, res, next) => {
 //       AUTH ROUTES
 // ================================
 
+// 1. Register
 app.post("/auth/register", async (req, res) => {
   try {
     const { name, email, password, question, answer } = req.body;
@@ -97,6 +98,7 @@ app.post("/auth/register", async (req, res) => {
   }
 });
 
+// 2. Login
 app.post("/auth/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -119,6 +121,7 @@ app.post("/auth/login", async (req, res) => {
   }
 });
 
+// 3. Forgot Password Routes (Simplified for brevity)
 app.post("/auth/forgot", async (req, res) => {
     try {
         const { email } = req.body;
@@ -151,6 +154,7 @@ app.post("/auth/forgot/reset", async (req, res) => {
     } catch (err) { res.status(400).json({ error: "Invalid token" }); }
 });
 
+// --- PROFILE ROUTES ---
 app.get("/auth/profile", isAuthenticated, async (req, res) => {
   try {
     const user = await User.findById(req.userId).select("-password");
@@ -176,9 +180,9 @@ app.use("/api", isAuthenticated, apiRouter);
 apiRouter.get("/data", async (req, res) => {
   try {
     const userId = req.userId;
+    // UPDATED: Populate collaborators to get Name/Email for the frontend list
     const userGroups = await Group.find({ $or: [{ owner: userId }, { collaborators: userId }] })
-        .populate('collaborators', 'name email')
-        .populate('owner', 'name email');
+        .populate('collaborators', 'name email');
     
     const groupIds = userGroups.map((g) => g._id);
     const userTasks = await Task.find({ $or: [{ owner: userId }, { group: { $in: groupIds } }] });
@@ -190,9 +194,10 @@ apiRouter.get("/data", async (req, res) => {
   } catch (err) { res.status(500).json({ error: "Fetch error" }); }
 });
 
+// NEW: Search Users for Autocomplete
 apiRouter.get("/users/search", async (req, res) => {
     const q = req.query.q;
-    if (!q || q.length < 2) return res.json([]); 
+    if (!q || q.length < 2) return res.json([]); // Don't search for single letters
     
     try {
         const users = await User.find({
@@ -209,12 +214,7 @@ apiRouter.post("/groups", async (req, res) => {
     const { name, type } = req.body;
     const group = new Group({ name, type, owner: req.userId, collaborators: type === 'collab' ? [req.userId] : [] });
     await group.save();
-    
-    const populatedGroup = await Group.findById(group._id)
-        .populate('owner', 'name email')
-        .populate('collaborators', 'name email');
-
-    res.status(201).json({ ...populatedGroup.toObject(), id: group._id });
+    res.status(201).json({ ...group.toObject(), id: group._id });
 });
 
 apiRouter.delete("/groups/:id", async (req, res) => {
@@ -228,6 +228,7 @@ apiRouter.post("/groups/:id/collaborators", async (req, res) => {
     const user = await User.findOne({ email: req.body.email });
     if (!user) return res.status(404).json({ error: "User not found" });
     
+    // Check if owner
     const groupCheck = await Group.findById(req.params.id);
     if (groupCheck.owner.toString() === user._id.toString()) {
         return res.status(400).json({error: "User is already the owner"});
@@ -237,26 +238,14 @@ apiRouter.post("/groups/:id/collaborators", async (req, res) => {
     res.json({ message: "Added" });
 });
 
-// Remove Collaborator
+// NEW: Remove Collaborator
 apiRouter.delete("/groups/:groupId/collaborators/:userId", async (req, res) => {
-    try {
-        const group = await Group.findById(req.params.groupId);
-        if (!group) return res.status(404).json({ error: "Group not found" });
+    const group = await Group.findOne({ _id: req.params.groupId, owner: req.userId });
+    if (!group) return res.status(403).json({ error: "Not authorized or group not found" });
 
-        // Check Permissions: Allow if Owner OR if Self
-        const isOwner = group.owner.toString() === req.userId;
-        const isSelf = req.userId === req.params.userId;
-
-        if (!isOwner && !isSelf) {
-            return res.status(403).json({ error: "Not authorized" });
-        }
-
-        group.collaborators.pull(req.params.userId);
-        await group.save();
-        res.json({ message: "Removed" });
-    } catch (err) {
-        res.status(500).json({ error: "Server error" });
-    }
+    group.collaborators.pull(req.params.userId);
+    await group.save();
+    res.json({ message: "Removed" });
 });
 
 apiRouter.post("/tasks", async (req, res) => {
@@ -265,16 +254,9 @@ apiRouter.post("/tasks", async (req, res) => {
     res.status(201).json({ ...task.toObject(), id: task._id });
 });
 
-// --- FIXED PUT ROUTE ---
 apiRouter.put("/tasks/:id", async (req, res) => {
     const { groupId, ...rest } = req.body;
-    const update = { ...rest };
-    
-    // Only update the group if groupId is explicitly included in the request
-    if (groupId !== undefined) {
-        update.group = groupId || null;
-    }
-    
+    const update = { ...rest, group: groupId || null };
     const task = await Task.findByIdAndUpdate(req.params.id, update, { new: true });
     res.json({ ...task.toObject(), id: task._id });
 });

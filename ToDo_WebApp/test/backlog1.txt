@@ -121,7 +121,7 @@
     .gap6{gap:6px}
     .hidden{display:none}
 
-    /* DROPDOWN STYLES (Sorting & Search) */
+    /* DROPDOWN STYLES */
     .dropdown-wrap { position: relative; }
     .dropdown-menu { 
         position: absolute; 
@@ -311,11 +311,9 @@
         <button class="btn-ghost" id="closeCollabBtn">Close</button>
     </div>
 
-    <div class="member-list" id="memberList">
-        </div>
+    <div class="member-list" id="memberList"></div>
   </div>
 </div>
-
 
 <div class="overlay" id="confirmOverlay" aria-hidden="true">
   <div class="modal">
@@ -324,6 +322,16 @@
     <div class="actions" style="margin-top:14px">
       <button class="btn-danger" id="confirmYes">Yes</button>
       <button class="btn-ghost" id="confirmNo">No</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="notificationOverlay" aria-hidden="true">
+  <div class="modal" style="text-align: center;">
+    <h2 id="notifTitle">Notification</h2>
+    <div class="muted" id="notifMessage" style="margin-bottom:20px; line-height:1.5;"></div>
+    <div class="actions" style="justify-content: center;">
+      <button class="btn-primary" id="notifClose" style="width:100%">OK</button>
     </div>
   </div>
 </div>
@@ -369,6 +377,27 @@ const addCollabBtn = document.getElementById("addCollabBtn");
 // --- UTILS ---
 function showOverlay(id) { document.getElementById(id).classList.add("show"); }
 function hideOverlay(id) { document.getElementById(id).classList.remove("show"); }
+
+function showNotification(title, message) {
+    document.getElementById("notifTitle").textContent = title;
+    document.getElementById("notifMessage").textContent = message;
+    showOverlay("notificationOverlay");
+}
+document.getElementById("notifClose").onclick = () => hideOverlay("notificationOverlay");
+
+let deleteCallback = null;
+function showConfirm(title, message, callback) {
+    document.getElementById("confirmTitle").textContent = title;
+    document.getElementById("confirmMessage").textContent = message;
+    deleteCallback = callback;
+    showOverlay("confirmOverlay");
+}
+document.getElementById("confirmYes").addEventListener("click", () => {
+    if (deleteCallback) deleteCallback();
+    hideOverlay("confirmOverlay");
+});
+document.getElementById("confirmNo").addEventListener("click", () => hideOverlay("confirmOverlay"));
+
 
 function getAuthHeaders() {
     const token = localStorage.getItem("token");
@@ -655,9 +684,8 @@ function populateGroupSelect() {
 }
 
 // --- COLLABORATOR LOGIC ---
-let selectedUserToAdd = null; // Track dropdown selection
+let selectedUserToAdd = null; 
 
-// Search Input Listener
 collabSearchInput.addEventListener("input", async (e) => {
     const q = e.target.value.trim();
     if (q.length < 2) {
@@ -698,12 +726,10 @@ collabMainBtn.addEventListener("click", () => {
     const group = state.groups.find(g => g.id === state.selectedGroupId);
     if (!group) return;
     
-    // Reset state
     collabSearchInput.value = "";
     selectedUserToAdd = null;
     memberListEl.innerHTML = "";
     
-    // 1. DETERMINE OWNER & PERMISSIONS
     let ownerId = null;
     let ownerName = "Unknown";
     let ownerEmail = "";
@@ -715,16 +741,16 @@ collabMainBtn.addEventListener("click", () => {
     } else if (group.owner) {
         ownerId = group.owner;
         if (ownerId === state.user._id) {
-            ownerName = state.user.name + " (You)";
-            ownerEmail = state.user.email;
+             ownerName = state.user.name + " (You)";
+             ownerEmail = state.user.email;
         } else {
-            ownerName = "Owner"; 
+             ownerName = "Owner"; 
         }
     }
 
     const amIOwner = (state.user._id === ownerId);
 
-    // 2. RENDER OWNER ROW (Always first, Never deletable)
+    // Render Owner
     const ownerRow = document.createElement("div");
     ownerRow.className = "member-item";
     ownerRow.style.borderLeft = "2px solid var(--primary)";
@@ -736,12 +762,10 @@ collabMainBtn.addEventListener("click", () => {
     `;
     memberListEl.appendChild(ownerRow);
     
-    // 3. RENDER COLLABORATORS
+    // Render Collaborators
     if (group.collaborators) {
         group.collaborators.forEach(u => {
             const uId = (u && typeof u === 'object') ? u._id : u;
-            
-            // Skip owner if in list
             if (String(uId) === String(ownerId)) return;
 
             const row = document.createElement("div");
@@ -749,8 +773,6 @@ collabMainBtn.addEventListener("click", () => {
             
             const uName = (u && u.name) ? u.name : "Loading...";
             const uEmail = (u && u.email) ? u.email : "";
-
-            // Is this row "Me"?
             const isMe = (String(uId) === String(state.user._id));
 
             row.innerHTML = `
@@ -760,19 +782,15 @@ collabMainBtn.addEventListener("click", () => {
                 </div>
             `;
 
-            // --- PERMISSION LOGIC ---
-            // Show button if: I am Owner OR It is Me (I want to leave)
             if (amIOwner || isMe) {
                 const delBtn = document.createElement("button");
                 delBtn.className = "btn-icon delete";
-                delBtn.innerHTML = isMe ? "🚪" : "🗑️"; // Door icon for leaving, Trash for removing
+                delBtn.innerHTML = isMe ? "🚪" : "🗑️";
                 delBtn.title = isMe ? "Leave Group" : "Remove User";
                 
                 delBtn.addEventListener("click", () => {
                     const msg = isMe ? "Are you sure you want to leave this group?" : "Remove this user from the group?";
-                    if(confirm(msg)) {
-                        removeCollaborator(group.id, uId);
-                    }
+                    showConfirm("Confirm Action", msg, () => removeCollaborator(group.id, uId));
                 });
                 row.appendChild(delBtn);
             }
@@ -786,7 +804,7 @@ collabMainBtn.addEventListener("click", () => {
 
 addCollabBtn.addEventListener("click", async () => {
     const email = collabSearchInput.value.trim();
-    if (!email) return alert("Please select a user or enter an email.");
+    if (!email) return showNotification("Input Error", "Please select a user or enter an email.");
     
     const headers = getAuthHeaders();
     if (!headers) return;
@@ -801,15 +819,13 @@ addCollabBtn.addEventListener("click", async () => {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Failed to add");
         
-        alert("Collaborator added!");
+        showNotification("Success", "Collaborator added!");
         hideOverlay("collabOverlay");
         await loadData();
-    } catch (err) { alert(err.message); }
+    } catch (err) { showNotification("Error", err.message); }
 });
 
 async function removeCollaborator(groupId, userId) {
-    if(!confirm("Remove this user from the group?")) return;
-    
     const headers = getAuthHeaders();
     if (!headers) return;
 
@@ -823,7 +839,7 @@ async function removeCollaborator(groupId, userId) {
         
         hideOverlay("collabOverlay");
         await loadData();
-    } catch (err) { alert(err.message); }
+    } catch (err) { showNotification("Error", err.message); }
 }
 
 // --- MODAL HANDLING ---
@@ -868,7 +884,7 @@ async function saveTask() {
     const name = document.getElementById("modalTaskName").value.trim();
     const groupVal = document.getElementById("modalGroup").value;
 
-    if (!name) return alert("Task name required.");
+    if (!name) return showNotification("Validation Error", "Task name required.");
 
     const data = {
         name,
@@ -890,13 +906,13 @@ async function saveTask() {
         
         hideOverlay("taskOverlay");
         await loadData(); 
-    } catch (err) { alert("Failed to save task"); }
+    } catch (err) { showNotification("Error", "Failed to save task"); }
 }
 
 async function saveGroup() {
     const name = document.getElementById("modalGroupName").value.trim();
     const type = document.getElementById("modalGroupType").value;
-    if (!name) return alert("Group name required.");
+    if (!name) return showNotification("Validation Error", "Group name required.");
     const data = { name, type };
 
     const headers = getAuthHeaders();
@@ -911,7 +927,7 @@ async function saveGroup() {
         
         hideOverlay("groupOverlay");
         await loadData();
-    } catch (err) { alert("Failed to save group"); }
+    } catch (err) { showNotification("Error", "Failed to save group"); }
 }
 
 async function toggleTaskDone(taskId, currentDoneState) {
@@ -941,7 +957,7 @@ async function deleteTask(taskId) {
         const res = await fetch(`${API_URL}/api/tasks/${taskId}`, { method: "DELETE", headers });
         if (!res.ok) throw new Error("Failed");
         await loadData();
-    } catch (err) { alert("Failed to delete task"); }
+    } catch (err) { showNotification("Error", "Failed to delete task"); }
 }
 
 async function performDeleteGroup(groupId) {
@@ -953,19 +969,20 @@ async function performDeleteGroup(groupId) {
         hideOverlay("groupOverlay"); 
         if (state.selectedGroupId === groupId) state.selectedGroupId = "all";
         await loadData();
-    } catch (err) { alert("Failed to delete group"); }
+    } catch (err) { showNotification("Error", "Failed to delete group"); }
 }
 
 async function clearCompletedTasks() {
-    if (!confirm("Delete all completed tasks?")) return;
-    const headers = getAuthHeaders();
-    if (!headers) return;
-    try {
-        const res = await fetch(`${API_URL}/api/tasks/completed`, { method: "DELETE", headers });
-        if (!res.ok) throw new Error("Failed");
-        state.tasks = state.tasks.filter(t => !t.done);
-        renderTasks();
-    } catch (err) { alert("Error clearing tasks"); }
+    showConfirm("Confirm Action", "Delete all completed tasks?", async () => {
+        const headers = getAuthHeaders();
+        if (!headers) return;
+        try {
+            const res = await fetch(`${API_URL}/api/tasks/completed`, { method: "DELETE", headers });
+            if (!res.ok) throw new Error("Failed");
+            state.tasks = state.tasks.filter(t => !t.done);
+            renderTasks();
+        } catch (err) { showNotification("Error", "Error clearing tasks"); }
+    });
 }
 
 // --- EVENT LISTENERS ---
@@ -996,20 +1013,6 @@ document.getElementById("deleteGroupBtn").addEventListener("click", () => {
 document.getElementById("btnAllTasks").addEventListener("click", () => selectGroup(null));
 document.querySelector(".profile-btn").addEventListener("click", () => { window.location.href = "accountProfile.html"; });
 clearCompletedBtn.addEventListener("click", clearCompletedTasks);
-
-document.getElementById("confirmNo").addEventListener("click", () => hideOverlay("confirmOverlay"));
-
-let deleteCallback = null;
-function showConfirm(title, message, callback) {
-    document.getElementById("confirmTitle").textContent = title;
-    document.getElementById("confirmMessage").textContent = message;
-    deleteCallback = callback;
-    showOverlay("confirmOverlay");
-}
-document.getElementById("confirmYes").addEventListener("click", () => {
-    if (deleteCallback) deleteCallback();
-    hideOverlay("confirmOverlay");
-});
 
 function confirmDeleteTask(taskId, taskName) {
     showConfirm("Delete Task", `Delete "${taskName}"?`, () => deleteTask(taskId));
