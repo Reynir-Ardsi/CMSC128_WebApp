@@ -155,10 +155,6 @@
     </div>
   </div>
 
-  <section class="task-area" id="taskArea" aria-live="polite"></section>
-
-<div class="overlay" id="taskOverlay" aria-hidden="true">
-
 <!-- Task Modal -->
 <div class="overlay" id="taskOverlay" aria-hidden="true">
   <div class="modal">
@@ -176,7 +172,7 @@
         <label class="muted">Priority</label>
         <select id="modalPriority"><option>Low</option><option>Mid</option><option>High</option></select>
       </div>
-      <div class="field" style="display: none;">
+      <div class="field">
         <label class="muted">Assign group</label>
         <select id="modalGroup"></select>
       </div>
@@ -195,17 +191,17 @@
     <div class="field">
       <label class="muted">Group name</label>
       <input id="modalGroupName" placeholder="E.g. Groceries" />
-    </div>
-    <div class="field">
-        <label class="muted">Type</label>
-        <select id="modalGroupType"><option value="personal">Personal</option><option value="collab">Collaborative</option></select>
-    </div>
-    <div class="actions">
-        <button class="btn-primary" id="saveGroupBtn">Create</button>
-        <button class="btn-ghost" id="cancelGroupBtn">Cancel</button>
-        <button class="btn-danger" id="deleteGroupBtn" style="display:none; margin-left: auto;">Delete</button>
-        </div>
-    </div>
+    </div>
+    <div class="field">
+      <label class="muted">Type</label>
+      <select id="modalGroupType"><option value="personal">Personal</option><option value="collab">Collaborative</option></select>
+    </div>
+    <div class="actions">
+      <button class="btn-primary" id="saveGroupBtn">Create</button>
+      <button class="btn-ghost" id="cancelGroupBtn">Cancel</button>
+            <button class="btn-danger" id="deleteGroupBtn" style="display:none; margin-left: auto;">Delete</button>
+    </div>
+  </div>
 </div>
 
 <!-- Confirm delete overlay -->
@@ -227,12 +223,12 @@ const API_URL = "http://localhost:5000";
 
 // --- STATE ---
 let state = {
-    user: null,
-    groups: [],
-    tasks: [],
-    selectedGroupId: "all",
-    editingTaskId: null,
-    editingGroupId: null,
+    user: null,
+    groups: [],
+    tasks: [],
+    selectedGroupId: "all",
+    editingTaskId: null,
+    editingGroupId: null,
 };
 
 // --- DOM ELEMENTS ---
@@ -291,12 +287,17 @@ async function loadUser() {
         state.user = await res.json();
         
         // Display user name
-        const accountHolderEl = document.createElement('div');
-        accountHolderEl.classList.add('muted');
-        accountHolderEl.textContent = `Welcome, ${state.user.name}`;
-        accountHolderEl.style.marginTop = "-8px"; 
-        accountHolderEl.style.marginBottom = "14px"; 
-        document.querySelector('.title-row').insertAdjacentElement('afterend', accountHolderEl);
+        // Display user name
+const accountHolderEl = document.createElement('div');
+accountHolderEl.classList.add('muted');
+accountHolderEl.textContent = `Welcome, ${state.user.name}`;
+
+// Add styling for spacing
+accountHolderEl.style.marginTop = "-8px"; // Pulls it closer to the title
+accountHolderEl.style.marginBottom = "14px"; // Adds space below it
+
+// Insert it *after* the title row, not inside it
+document.querySelector('.title-row').insertAdjacentElement('afterend', accountHolderEl);
 
         loadData(); // Load all groups and tasks
     } catch (err) {
@@ -323,6 +324,7 @@ async function loadData() {
         if (!res.ok) throw new Error("Failed to fetch data");
         
         const data = await res.json();
+        // The JWT server sends 'id' not '_id'
         state.groups = data.groups;
         state.tasks = data.tasks;
         
@@ -347,10 +349,12 @@ async function loadData() {
 function updateTaskCounts() {
     const personalGroups = state.groups.filter(g => g.type === 'personal').map(g => g.id);
     const collabGroups = state.groups.filter(g => g.type === 'collab').map(g => g.id);
+
     let personalTaskCount = 0;
     let collabTaskCount = 0;
 
     state.tasks.forEach(task => {
+        // The JWT server sends 'task.group' as a simple ID
         if (!task.group || personalGroups.includes(task.group)) {
             personalTaskCount++;
         } else if (collabGroups.includes(task.group)) {
@@ -369,6 +373,7 @@ function renderGroups() {
 
     const createGroupItem = (g) => {
         const el = document.createElement("div");
+        // Use 'g.id' from JWT server
         el.className = "group-item" + (state.selectedGroupId === g.id ? " active" : "");
         el.dataset.id = g.id;
         el.addEventListener("click", () => selectGroup(g));
@@ -394,8 +399,10 @@ function renderGroups() {
             openGroupModal(g);
         });
         actions.appendChild(editBtn);
+
         el.appendChild(left);
         el.appendChild(actions);
+
         return el;
     };
 
@@ -411,9 +418,11 @@ function renderGroups() {
 
 function renderTasks() {
     taskArea.innerHTML = "";
+    
     let filteredTasks = state.tasks;
 
     if (state.selectedGroupId !== "all") {
+        // Use 't.group'
         filteredTasks = state.tasks.filter(t => t.group === state.selectedGroupId);
     }
     
@@ -435,12 +444,14 @@ function renderTasks() {
         const check = document.createElement("button"); 
         check.className = "check" + (t.done ? " checked" : "");
         check.innerHTML = t.done ? "✔" : "";
+        // Use 't.id'
         check.addEventListener("click", () => toggleTaskDone(t.id, t.done));
         left.appendChild(check);
 
         const info = document.createElement("div"); info.className = "task-info";
         const name = document.createElement("div"); name.className = "task-name"; name.textContent = t.name;
         const due = document.createElement("div"); due.className = "task-due";
+        // Use 't.date' and 't.time' from JWT server
         due.textContent = (t.date || "") + (t.time ? ` @ ${t.time}` : "");
         info.appendChild(name); info.appendChild(due);
         left.appendChild(info);
@@ -465,6 +476,7 @@ function renderTasks() {
         const deleteBtn = document.createElement("button");
         deleteBtn.innerHTML = "🗑️";
         deleteBtn.title = "Delete Task";
+        // Use 't.id'
         deleteBtn.addEventListener("click", () => confirmDeleteTask(t.id, t.name));
         actions.appendChild(deleteBtn);
 
@@ -476,7 +488,9 @@ function renderTasks() {
 }
 
 function selectGroup(group) {
+    // Use 'group.id'
     state.selectedGroupId = group ? group.id : "all";
+    
     selectedGroupTitle.textContent = group ? group.name : "All tasks";
     
     if (group && group.type === 'collab') {
@@ -495,6 +509,7 @@ function populateGroupSelect() {
     modalGroupSelect.innerHTML = '<option value="">(Personal Task)</option>';
     state.groups.forEach(g => {
         const option = document.createElement('option');
+        // Use 'g.id'
         option.value = g.id;
         option.textContent = `${g.name} (${g.type})`;
         modalGroupSelect.appendChild(option);
@@ -504,18 +519,21 @@ function populateGroupSelect() {
 // --- MODAL HANDLING ---
 
 function openTaskModal(task = null) {
+    // Use 'task.id'
     state.editingTaskId = task ? task.id : null;
     document.getElementById("taskModalTitle").textContent = task ? "Edit Task" : "Create Task";
     
     document.getElementById("modalTaskName").value = task ? task.name : "";
+    // Use 'task.date' and 'task.time'
     document.getElementById("modalDueDate").value = task ? task.date : "";
     document.getElementById("modalDueTime").value = task ? task.time : "";
     document.getElementById("modalPriority").value = task ? task.priority : "Low";
     
-    // This logic is from the previous step and is correct
     if (task) {
+        // Use 'task.group'
         document.getElementById("modalGroup").value = task.group ? task.group : "";
     } else {
+        // Pre-select current group when creating
         document.getElementById("modalGroup").value = state.selectedGroupId === "all" ? "" : state.selectedGroupId;
     }
     
@@ -523,6 +541,7 @@ function openTaskModal(task = null) {
 }
 
 function openGroupModal(group = null) {
+    // Use 'group.id'
     state.editingGroupId = group ? group.id : null;
     document.querySelector("#groupOverlay h2").textContent = group ? "Edit Group" : "Create Task Group";
     document.getElementById("saveGroupBtn").textContent = group ? "Save Changes" : "Create";
@@ -542,12 +561,14 @@ async function saveTask() {
     const name = document.getElementById("modalTaskName").value.trim();
     if (!name) return alert("Task name required.");
 
+    // Send 'date' and 'time'
     const data = {
         name,
         date: document.getElementById("modalDueDate").value,
         time: document.getElementById("modalDueTime").value,
         priority: document.getElementById("modalPriority").value,
-        groupId: state.selectedGroupId === "all" ? null : state.selectedGroupId,
+        groupId: document.getElementById("modalGroup").value || null,
+        // 'owner' is added by the server from the token
     };
 
     const headers = getAuthHeaders();
@@ -555,25 +576,20 @@ async function saveTask() {
 
     try {
         const method = state.editingTaskId ? "PUT" : "POST";
+        // Use '/api' routes
         const url = state.editingTaskId ? `${API_URL}/api/tasks/${state.editingTaskId}` : `${API_URL}/api/tasks`;
 
-        const res = await fetch(url, {
+        await fetch(url, {
             method,
-            headers: headers, 
+            headers: headers, // Send token
             body: JSON.stringify(data)
         });
 
-        // **FIXED:** Check if response is successful
-        if (!res.ok) {
-            const errorData = await res.json();
-            throw new Error(errorData.error || "Server failed to save task");
-        }
-
         hideOverlay("taskOverlay");
         await loadData(); // Refresh all data
-    } catch (err) { // **FIXED:** Removed stray '{'
+    } catch (err) {
         console.error("Failed to save task:", err);
-        alert("Failed to save task: " + err.message); // Give a better error
+        alert("Failed to save task.");
     }
 }
 
@@ -581,6 +597,8 @@ async function saveGroup() {
     const name = document.getElementById("modalGroupName").value.trim();
     const type = document.getElementById("modalGroupType").value;
     if (!name) return alert("Group name required.");
+
+    // 'ownerId' is added by the server from the token
     const data = { name, type };
 
     const headers = getAuthHeaders();
@@ -588,24 +606,20 @@ async function saveGroup() {
 
     try {
         const method = state.editingGroupId ? "PUT" : "POST";
+        // Use '/api' routes
         const url = state.editingGroupId ? `${API_URL}/api/groups/${state.editingGroupId}` : `${API_URL}/api/groups`;
         
-        // **FIXED:** Added response checking
-        const res = await fetch(url, {
+        await fetch(url, {
             method,
-            headers: headers,
+            headers: headers, // Send token
             body: JSON.stringify(data)
         });
-        if (!res.ok) {
-            const errorData = await res.json();
-            throw new Error(errorData.error || "Server failed to save group");
-        }
-        
+
         hideOverlay("groupOverlay");
         await loadData();
     } catch (err) {
         console.error("Failed to save group:", err);
-        alert("Failed to save group: " + err.message);
+        alert("Failed to save group.");
     }
 }
 
@@ -614,16 +628,12 @@ async function toggleTaskDone(taskId, currentDoneState) {
     if (!headers) return;
 
     try {
-        // **FIXED:** Moved 'if' check *after* the fetch
-        const res = await fetch(`${API_URL}/api/tasks/${taskId}`, {
+        // Use '/api' routes
+        await fetch(`${API_URL}/api/tasks/${taskId}`, {
             method: "PUT",
             headers: headers, // Send token
             body: JSON.stringify({ done: !currentDoneState })
         });
-        
-        if (!res.ok) {
-            throw new Error("Failed to update task state");
-        }
         
         // Optimistic update for speed
         const task = state.tasks.find(t => t.id === taskId);
@@ -641,20 +651,15 @@ async function deleteTask(taskId) {
     if (!headers) return;
 
     try {
-        // **FIXED:** Added response checking
-        const res = await fetch(`${API_URL}/api/tasks/${taskId}`, { 
+        // Use '/api' routes
+        await fetch(`${API_URL}/api/tasks/${taskId}`, { 
             method: "DELETE",
             headers: headers // Send token
         });
-
-        if (!res.ok) {
-            throw new Error("Failed to delete task");
-        }
-
         await loadData();
     } catch (err) {
         console.error("Failed to delete task:", err);
-        alert("Failed to delete task: " + err.message);
+        alert("Failed to delete task.");
     }
 }
 
@@ -663,22 +668,18 @@ async function deleteGroup() {
     if (!headers) return;
 
     try {
-        // **FIXED:** Added response checking
-        const res = await fetch(`${API_URL}/api/groups/${state.editingGroupId}`, { 
+        // Use '/api' routes
+        await fetch(`${API_URL}/api/groups/${state.editingGroupId}`, { 
             method: "DELETE",
             headers: headers // Send token
         });
-
-        if (!res.ok) {
-            throw new Error("Failed to delete group");
-        }
         
         hideOverlay("groupOverlay");
         state.selectedGroupId = "all";
         await loadData();
     } catch (err) {
         console.error("Failed to delete group:", err);
-        alert("Failed to delete group: " + err.message);
+        alert("Failed to delete group.");
     }
 }
 
@@ -687,16 +688,11 @@ async function clearCompletedTasks() {
     if (!headers) return;
 
     try {
-        // **FIXED:** Added response checking
+        // Use '/api' routes
         const res = await fetch(`${API_URL}/api/tasks/completed`, { 
             method: "DELETE",
             headers: headers // Send token
         });
-
-        if (!res.ok) {
-            throw new Error("Failed to clear completed tasks");
-        }
-
         const data = await res.json();
         alert(data.message);
         await loadData();
@@ -721,7 +717,7 @@ document.getElementById("deleteGroupBtn").addEventListener("click", () => confir
 // Sidebar Navigation
 document.getElementById("btnAllTasks").addEventListener("click", () => selectGroup(null));
 document.querySelector(".profile-btn").addEventListener("click", () => {
-    window.location.href = "accountProfile.html";
+    window.location.href = "accountProfile.html";
 });
 clearCompletedBtn.addEventListener("click", clearCompletedTasks);
 
@@ -730,38 +726,38 @@ document.getElementById("confirmNo").addEventListener("click", () => hideOverlay
 
 let deleteCallback = null;
 function showConfirm(title, message, callback) {
-    document.getElementById("confirmTitle").textContent = title;
-    document.getElementById("confirmMessage").textContent = message;
-    deleteCallback = callback;
-    showOverlay("confirmOverlay");
+    document.getElementById("confirmTitle").textContent = title;
+    document.getElementById("confirmMessage").textContent = message;
+    deleteCallback = callback;
+    showOverlay("confirmOverlay");
 }
 document.getElementById("confirmYes").addEventListener("click", () => {
-    if (deleteCallback) deleteCallback();
-    hideOverlay("confirmOverlay");
+    if (deleteCallback) deleteCallback();
+    hideOverlay("confirmOverlay");
 });
 
 function confirmDeleteTask(taskId, taskName) {
-    showConfirm(
-        "Delete Task", 
-        `Are you sure you want to delete the task: "${taskName}"?`, 
-        () => deleteTask(taskId)
-    );
+    showConfirm(
+        "Delete Task", 
+        `Are you sure you want to delete the task: "${taskName}"?`, 
+        () => deleteTask(taskId)
+    );
 }
 
 function confirmDeleteGroup(groupId) {
-    const group = state.groups.find(g => g.id === groupId);
-    if (!group) return;
-    showConfirm(
-        "Delete Group", 
-        `Are you sure you want to delete the group "${group.name}"? All associated tasks will also be deleted.`,
-        deleteGroup
-    );
+    // Use 'g.id'
+    const group = state.groups.find(g => g.id === groupId);
+    if (!group) return;
+    showConfirm(
+        "Delete Group", 
+        `Are you sure you want to delete the group "${group.name}"? All associated tasks will also be deleted.`,
+        deleteGroup
+    );
 }
 
 // --- INITIALIZATION ---
 loadUser(); // Start the app
 
 </script>
-
 </body>
 </html>
