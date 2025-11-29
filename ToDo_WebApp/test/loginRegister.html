@@ -17,7 +17,6 @@
     --shadow: rgba(0, 0, 0, 0.6);
 }
 
-/* Base Layout */
 body {
     margin: 0;
     height: 100vh;
@@ -29,7 +28,6 @@ body {
     color: var(--text-primary);
 }
 
-/* Shared Container Styles */
 .container {
     background: var(--surface);
     border-radius: 12px;
@@ -39,7 +37,6 @@ body {
     transition: all 0.4s ease;
 }
 
-/* Titles */
 h2 {
     text-align: center;
     margin-top: 0;
@@ -47,7 +44,6 @@ h2 {
     color: var(--text-primary);
 }
 
-/* Forms */
 form {
     display: flex;
     flex-direction: column;
@@ -70,7 +66,6 @@ input:focus, select:focus {
     box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.3);
 }
 
-/* Buttons */
 button {
     padding: 12px;
     background: var(--accent);
@@ -87,7 +82,6 @@ button:hover {
     transform: translateY(-1px);
 }
 
-/* Toggle Links */
 .toggle {
     display: flex;
     justify-content: space-between;
@@ -107,7 +101,7 @@ button:hover {
     color: #a9c8ff;
 }
 
-/* Forgot Password Overlay */
+/* Modal Overlay */
 .overlay {
     position: fixed;
     top: 0;
@@ -119,6 +113,7 @@ button:hover {
     display: none;
 }
 
+/* Forgot Password Modal */
 #forget-container {
     position: fixed;
     top: 50%;
@@ -141,7 +136,12 @@ button:hover {
     pointer-events: auto;
 }
 
-/* --- NEW: Custom Alert Popup --- */
+/* Helper for multi-step visibility */
+.hidden {
+    display: none !important;
+}
+
+/* Custom Alert Popup */
 #alertOverlay {
     position: fixed;
     top: 0;
@@ -149,7 +149,7 @@ button:hover {
     width: 100%;
     height: 100%;
     background: rgba(0,0,0,0.5);
-    z-index: 1900; /* Above forget overlay */
+    z-index: 1900;
     display: none;
 }
 
@@ -158,7 +158,7 @@ button:hover {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%) translateY(15px);
-    z-index: 2000; /* Above everything */
+    z-index: 2000;
     width: 340px;
     border-radius: 12px;
     box-shadow: 0 8px 24px var(--shadow);
@@ -179,6 +179,7 @@ button:hover {
 </head>
 <body>
 
+<!-- LOGIN -->
 <div id="login-container" class="container">
     <h2>Login</h2>
     <form id="loginForm">
@@ -192,6 +193,7 @@ button:hover {
     </div>
 </div>
 
+<!-- REGISTER -->
 <div id="register-container" class="container" style="display:none;">
     <h2>Register</h2>
     <form id="registerForm">
@@ -199,6 +201,8 @@ button:hover {
         <input type="email" id="register-email" placeholder="Email" required />
         <input type="password" id="register-password" placeholder="Password" required />
         <input type="password" id="register-confirm" placeholder="Confirm Password" required />
+        
+        <!-- Restored Security Question -->
         <select id="register-question" required>
             <option value="">Select a Security Question</option>
             <option value="What is your first pet’s name?">What is your first pet’s name?</option>
@@ -207,6 +211,7 @@ button:hover {
             <option value="What city were you born in?">What city were you born in?</option>
         </select>
         <input type="text" id="register-answer" placeholder="Your Answer" required />
+        
         <button type="submit">Sign Up</button>
     </form>
     <div class="toggle" style="justify-content:center;">
@@ -214,32 +219,68 @@ button:hover {
     </div>
 </div>
 
+<!-- FORGOT PASSWORD OVERLAY -->
 <div class="overlay" id="forgetOverlay"></div>
 <div id="forget-container">
     <h2 id="forget-title">Reset Password</h2>
-    <form id="forgetForm">
-        <input type="email" id="forget-email" placeholder="Enter your email" required />
+    
+    <!-- Step 1: Email -->
+    <form id="fp-step-1">
+        <input type="email" id="fp-email" placeholder="Enter your email" required />
         <button type="submit">Continue</button>
     </form>
+
+    <!-- Step 2: Question -->
+    <form id="fp-step-2" class="hidden">
+        <p id="fp-question-text" style="color:var(--text-secondary); margin-bottom:12px;"></p>
+        <input type="text" id="fp-answer" placeholder="Your answer" required />
+        <button type="submit">Verify</button>
+    </form>
+
+    <!-- Step 3: New Password -->
+    <form id="fp-step-3" class="hidden">
+        <input type="password" id="fp-new-pass" placeholder="New password" required />
+        <button type="submit">Reset Password</button>
+    </form>
+
     <div class="toggle" style="justify-content:center;">
         <a href="#" id="close-forget">Back to Login</a>
     </div>
 </div>
 
+<!-- ALERT MODAL -->
 <div class="overlay" id="alertOverlay"></div>
 <div id="alert-container">
     <h2 id="alert-title">Notification</h2>
     <div id="alert-message" style="margin-bottom: 20px; line-height: 1.6; color: var(--text-secondary);"></div>
     <button id="alert-close-btn" style="width: 100%;">OK</button>
 </div>
+
 <script>
-// References
+// --- UTILS: Custom Alert ---
+const alertOverlay = document.getElementById("alertOverlay");
+const alertContainer = document.getElementById("alert-container");
+const alertMsg = document.getElementById("alert-message");
+const alertBtn = document.getElementById("alert-close-btn");
+
+function showAlert(msg) {
+    alertMsg.textContent = msg;
+    alertOverlay.style.display = "block";
+    alertContainer.classList.add("active");
+}
+
+alertBtn.onclick = () => {
+    alertOverlay.style.display = "none";
+    alertContainer.classList.remove("active");
+};
+
+// --- DOM REFS ---
 const loginContainer = document.getElementById("login-container");
 const registerContainer = document.getElementById("register-container");
 const forgetContainer = document.getElementById("forget-container");
 const forgetOverlay = document.getElementById("forgetOverlay");
 
-// --- PAGE SWITCHING ---
+// --- NAVIGATION ---
 document.getElementById("to-register").onclick = e => {
     e.preventDefault();
     loginContainer.style.display = "none";
@@ -252,87 +293,160 @@ document.getElementById("to-login").onclick = e => {
     loginContainer.style.display = "block";
 };
 
-// --- (Forgot Password is disabled for now) ---
-// We need to add new routes to server.js to fix this.
-document.getElementById("to-forget").onclick = e => {
-    e.preventDefault();
-    alert("Forgot Password logic needs to be updated on the server.");
-};
-document.getElementById("close-forget").onclick = e => {
-    e.preventDefault();
-};
-forgetOverlay.onclick = () => {};
+// --- FORGOT PASSWORD LOGIC ---
+let fpState = { email: "", token: "" };
 
+const steps = [
+    document.getElementById("fp-step-1"),
+    document.getElementById("fp-step-2"),
+    document.getElementById("fp-step-3")
+];
 
-// --- LOGIN (THE MAIN FIX) ---
-document.getElementById("loginForm").onsubmit = async e => {
+function showStep(index) {
+    steps.forEach((el, i) => {
+        if (i === index) el.classList.remove("hidden");
+        else el.classList.add("hidden");
+    });
+}
+
+function openForgetModal() {
+    fpState = { email: "", token: "" }; // Reset state
+    document.getElementById("fp-email").value = "";
+    document.getElementById("fp-answer").value = "";
+    document.getElementById("fp-new-pass").value = "";
+    document.getElementById("forget-title").textContent = "Reset Password";
+    
+    showStep(0); // Show email form
+    forgetOverlay.style.display = "block";
+    forgetContainer.classList.add("active");
+}
+
+function closeForgetModal() {
+    forgetOverlay.style.display = "none";
+    forgetContainer.classList.remove("active");
+}
+
+document.getElementById("to-forget").onclick = (e) => { e.preventDefault(); openForgetModal(); };
+document.getElementById("close-forget").onclick = (e) => { e.preventDefault(); closeForgetModal(); };
+
+// Step 1: Check Email
+document.getElementById("fp-step-1").onsubmit = async (e) => {
+    e.preventDefault();
+    const email = document.getElementById("fp-email").value.trim().toLowerCase();
+    
+    try {
+        const res = await fetch("http://localhost:5000/auth/forgot", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ email })
+        });
+        const data = await res.json();
+        
+        if (!res.ok) return showAlert(data.error);
+        
+        // Success: Move to Step 2
+        fpState.email = email;
+        document.getElementById("fp-question-text").textContent = data.question;
+        document.getElementById("forget-title").textContent = "Security Question";
+        showStep(1);
+    } catch (err) { showAlert("Network error"); }
+};
+
+// Step 2: Verify Answer
+document.getElementById("fp-step-2").onsubmit = async (e) => {
+    e.preventDefault();
+    const answer = document.getElementById("fp-answer").value.trim();
+    
+    try {
+        const res = await fetch("http://localhost:5000/auth/forgot/verify", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ email: fpState.email, answer })
+        });
+        const data = await res.json();
+        
+        if (!res.ok) return showAlert(data.error);
+        
+        // Success: Get reset token and move to Step 3
+        fpState.token = data.resetToken;
+        document.getElementById("forget-title").textContent = "New Password";
+        showStep(2);
+    } catch (err) { showAlert("Network error"); }
+};
+
+// Step 3: Reset Password
+document.getElementById("fp-step-3").onsubmit = async (e) => {
+    e.preventDefault();
+    const newPassword = document.getElementById("fp-new-pass").value;
+    
+    try {
+        const res = await fetch("http://localhost:5000/auth/forgot/reset", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ resetToken: fpState.token, newPassword })
+        });
+        const data = await res.json();
+        
+        if (!res.ok) return showAlert(data.error);
+        
+        showAlert("Password reset successfully! Please login.");
+        closeForgetModal();
+    } catch (err) { showAlert("Network error"); }
+};
+
+// --- LOGIN ---
+document.getElementById("loginForm").onsubmit = async (e) => {
     e.preventDefault();
     const email = document.getElementById("login-email").value.trim().toLowerCase();
     const password = document.getElementById("login-password").value;
 
     try {
-        // 1. Call the NEW /auth/login route
         const res = await fetch("http://localhost:5000/auth/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email, password })
         });
         const data = await res.json();
-        
-        // 2. Check for the TOKEN
+
         if (res.ok && data.token) {
-            // 3. SAVE THE TOKEN
             localStorage.setItem("token", data.token);
-            localStorage.setItem("userId", data.userId); // Still useful for profile page
-            
-            // 4. Redirect to dashboard
+            localStorage.setItem("userId", data.userId);
             window.location.href = "todoDashboard.html";
         } else {
-            alert("❌ " + (data.error || "Login failed"));
+            showAlert(data.error || "Login failed");
         }
-    } catch (err) {
-        console.error(err);
-        alert("⚠️ Network error");
-    }
+    } catch (err) { showAlert("Network error"); }
 };
 
-// --- REGISTER (UPDATED) ---
-document.getElementById("registerForm").onsubmit = async e => {
+// --- REGISTER ---
+document.getElementById("registerForm").onsubmit = async (e) => {
     e.preventDefault();
     const name = document.getElementById("register-name").value.trim();
     const email = document.getElementById("register-email").value.trim().toLowerCase();
     const password = document.getElementById("register-password").value;
     const confirm = document.getElementById("register-confirm").value;
-    
-    // Note: The JWT server doesn't use security questions by default
-    // We can add them back, but for now, let's just register.
-    // const question = document.getElementById("register-question").value;
-    // const answer = document.getElementById("register-answer").value.trim().toLowerCase();
+    const question = document.getElementById("register-question").value;
+    const answer = document.getElementById("register-answer").value.trim();
 
-    if (password !== confirm) return alert("❌ Passwords do not match");
+    if (password !== confirm) return showAlert("Passwords do not match");
 
     try {
-        // 1. Call the NEW /auth/register route
         const res = await fetch("http://localhost:5000/auth/register", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            // 2. Send the new simple payload
-            body: JSON.stringify({ name, email, password })
+            body: JSON.stringify({ name, email, password, question, answer })
         });
         const data = await res.json();
 
         if (res.ok) {
-            alert("✅ Account registered! Login now.");
+            showAlert("Account registered! Login now.");
             registerContainer.style.display = "none";
             loginContainer.style.display = "block";
             document.getElementById("registerForm").reset();
         } else {
-            alert("❌ " + (data.error || "Registration failed"));
+            showAlert(data.error || "Registration failed");
         }
-    } catch (err) {
-        console.error(err);
-        alert("⚠️ Network error");
-    }
+    } catch (err) { showAlert("Network error"); }
 };
 </script>
 </body>

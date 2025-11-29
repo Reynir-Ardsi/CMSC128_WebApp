@@ -3,13 +3,11 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken"); // <-- NEW
+const jwt = require("jsonwebtoken");
 
 // --- EXPRESS & CORS SETUP ---
 const app = express();
 app.use(express.json());
-
-// CORS setup is simpler: no credentials needed
 app.use(cors());
 
 // --- MONGODB CONNECTION ---
@@ -20,9 +18,6 @@ mongoose
   .catch((err) => console.error("❌ MongoDB connection failed:", err));
 
 // --- MONGOOSE SCHEMAS ---
-// (User, Group, Task, DeletedTask schemas are IDENTICAL to the previous file...
-// ... so I will omit them for brevity. Copy them from the previous answer.)
-
 const UserSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true, lowercase: true },
@@ -60,53 +55,51 @@ const Group = mongoose.model("Group", GroupSchema);
 const Task = mongoose.model("Task", TaskSchema);
 const DeletedTask = mongoose.model("DeletedTask", DeletedTaskSchema);
 
-
-// --- JWT AUTH MIDDLEWARE ---
-// This REPLACES the old 'isAuthenticated'
+// --- MIDDLEWARE ---
 const isAuthenticated = (req, res, next) => {
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Format: "Bearer TOKEN"
+  const token = authHeader && authHeader.split(' ')[1];
+  if (!token) return res.status(401).json({ error: "Unauthorized" });
 
-  if (token == null) {
-    return res.status(401).json({ error: "Unauthorized: No token provided." });
-  }
-
-  // !! Add JWT_SECRET to your .env file
   jwt.verify(token, process.env.JWT_SECRET || "your-default-secret", (err, decoded) => {
-    if (err) {
-      return res.status(403).json({ error: "Forbidden: Invalid token." });
-    }
-    // Add the user ID from the token payload to the request object
+    if (err) return res.status(403).json({ error: "Invalid token" });
     req.userId = decoded.userId;
     next();
   });
 };
 
+// ================================
+//       AUTH ROUTES
+// ================================
 
-// --- AUTH ROUTES ---
-
-// Register (No auth needed)
+// 1. Register
 app.post("/auth/register", async (req, res) => {
-    // (This logic is unchanged)
-    try {
-        const { name, email, password } = req.body;
-        if (!name || !email || !password) {
-            return res.status(400).json({ error: "All fields are required" });
-        }
-        const existing = await User.findOne({ email });
-        if (existing) return res.status(400).json({ error: "Email already exists" });
+  try {
+    const { name, email, password, question, answer } = req.body;
+    if (!email || !password || !name) return res.status(400).json({ error: "Missing fields" });
+    
+    const existing = await User.findOne({ email });
+    if (existing) return res.status(400).json({ error: "Email already exists" });
 
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const user = new User({ name, email, password: hashedPassword });
-        await user.save();
-        res.status(201).json({ message: "User registered successfully" });
-    } catch (err) {
-        console.error("Register Error:", err);
-        res.status(500).json({ error: "Server error" });
-    }
+    const hashedPassword = await bcrypt.hash(password, 10);
+    // Note: In a real app, you should also hash the security answer!
+    const user = new User({ 
+        name, 
+        email, 
+        password: hashedPassword,
+        securityQuestion: question, 
+        securityAnswer: answer 
+    });
+    
+    await user.save();
+    res.status(201).json({ message: "User registered successfully" });
+  } catch (err) {
+    console.error("Register Error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
 });
 
-// Login (This is the main change)
+// 2. Login
 app.post("/auth/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -116,40 +109,85 @@ app.post("/auth/login", async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ error: "Invalid credentials" });
 
-    // 1. Create JWT Payload
-    const payload = { userId: user._id };
-
-    // 2. Sign the token
     const token = jwt.sign(
-      payload,
-      process.env.JWT_SECRET || "your-default-secret", // !! Use .env
-      { expiresIn: '1d' } // Token expires in 1 day
+      { userId: user._id },
+      process.env.JWT_SECRET || "your-default-secret",
+      { expiresIn: '1d' }
     );
 
-    // 3. Send token to client
-    res.json({ message: "Login successful", token: token, userId: user._id, name: user.name });
-
+    res.json({ message: "Login successful", token, userId: user._id, name: user.name });
   } catch (err) {
     console.error("Login Error:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
 
-// Logout (Stateless)
-app.post("/auth/logout", (req, res) => {
-  // With JWT, logout is handled by the client (deleting the token).
-  // This endpoint is just here to be polite.
-  res.json({ message: "Logged out successfully" });
+// 3. Forgot Password - Step 1: Check Email & Get Question
+app.post("/auth/forgot", async (req, res) => {
+    try {
+        const { email } = req.body;
+        const user = await User.findOne({ email });
+        if (!user) return res.status(404).json({ error: "Email not found" });
+        if (!user.securityQuestion) return res.status(400).json({ error: "No security question set for this account" });
+
+        res.json({ question: user.securityQuestion });
+    } catch (err) {
+        res.status(500).json({ error: "Server error" });
+    }
 });
 
-// Get/Update Profile (Now use req.userId from the token)
+// 4. Forgot Password - Step 2: Verify Answer
+app.post("/auth/forgot/verify", async (req, res) => {
+    try {
+        const { email, answer } = req.body;
+        const user = await User.findOne({ email });
+        if (!user) return res.status(404).json({ error: "User not found" });
+
+        // Simple string comparison (case-insensitive)
+        if (user.securityAnswer.toLowerCase().trim() !== answer.toLowerCase().trim()) {
+            return res.status(401).json({ error: "Incorrect answer" });
+        }
+
+        // Generate a short-lived "Reset Token" (valid for 10 mins)
+        const resetToken = jwt.sign(
+            { userId: user._id, purpose: "reset_password" },
+            process.env.JWT_SECRET || "your-default-secret",
+            { expiresIn: '10m' }
+        );
+
+        res.json({ message: "Answer correct", resetToken });
+    } catch (err) {
+        res.status(500).json({ error: "Server error" });
+    }
+});
+
+// 5. Forgot Password - Step 3: Reset Password
+app.post("/auth/forgot/reset", async (req, res) => {
+    try {
+        const { resetToken, newPassword } = req.body;
+        
+        // Verify the special reset token
+        const decoded = jwt.verify(resetToken, process.env.JWT_SECRET || "your-default-secret");
+        if (decoded.purpose !== "reset_password") {
+            return res.status(403).json({ error: "Invalid token purpose" });
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        await User.findByIdAndUpdate(decoded.userId, { password: hashedPassword });
+
+        res.json({ message: "Password updated successfully" });
+    } catch (err) {
+        res.status(400).json({ error: "Invalid or expired token" });
+    }
+});
+
+// --- PROFILE ROUTES ---
 app.get("/auth/profile", isAuthenticated, async (req, res) => {
   try {
-    const user = await User.findById(req.userId).select("-password"); // <-- CHANGED
+    const user = await User.findById(req.userId).select("-password");
     if (!user) return res.status(404).json({ error: "User not found" });
     res.json(user);
   } catch (err) {
-    console.error("Profile Error:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
@@ -158,177 +196,82 @@ app.put("/auth/profile", isAuthenticated, async (req, res) => {
   try {
     const { name, email, password } = req.body;
     const updateData = { name, email };
-    if (password) {
-      updateData.password = await bcrypt.hash(password, 10);
-    }
-    const user = await User.findByIdAndUpdate(req.userId, updateData, { // <-- CHANGED
-      new: true,
-    }).select("-password");
-    if (!user) return res.status(404).json({ error: "User not found" });
-    res.json({ message: "Account updated successfully", user });
+    if (password) updateData.password = await bcrypt.hash(password, 10);
+    
+    const user = await User.findByIdAndUpdate(req.userId, updateData, { new: true }).select("-password");
+    res.json({ message: "Updated", user });
   } catch (err) {
-    console.error("Profile Update Error:", err);
-    res.status(400).json({ error: "Failed to update account" });
+    res.status(400).json({ error: "Update failed" });
   }
 });
 
-
-// --- DASHBOARD API ROUTES (Protected) ---
+// --- DATA ROUTES (Groups/Tasks) ---
 const apiRouter = express.Router();
-app.use("/api", isAuthenticated, apiRouter); // Protect all /api routes
+app.use("/api", isAuthenticated, apiRouter);
 
-// GET /api/data
 apiRouter.get("/data", async (req, res) => {
   try {
-    const userId = req.userId; // <-- CHANGED
+    const userId = req.userId;
     const userGroups = await Group.find({ $or: [{ owner: userId }, { collaborators: userId }] });
     const groupIds = userGroups.map((g) => g._id);
     const userTasks = await Task.find({ $or: [{ owner: userId }, { group: { $in: groupIds } }] });
-    const cleanGroups = userGroups.map(doc => ({ ...doc.toObject(), id: doc._id }));
-    const cleanTasks = userTasks.map(doc => ({ ...doc.toObject(), id: doc._id, group: doc.group ? doc.group.toString() : null }));
+    
+    // Map _id to id for frontend
+    const cleanGroups = userGroups.map(d => ({ ...d.toObject(), id: d._id }));
+    const cleanTasks = userTasks.map(d => ({ ...d.toObject(), id: d._id, group: d.group || null }));
+    
     res.json({ groups: cleanGroups, tasks: cleanTasks });
-  } catch (err) {
-    console.error("GET /api/data Error:", err);
-    res.status(500).json({ error: "Failed to fetch data" });
-  }
+  } catch (err) { res.status(500).json({ error: "Fetch error" }); }
 });
 
-// --- Group Routes ---
 apiRouter.post("/groups", async (req, res) => {
-  try {
     const { name, type } = req.body;
-    const ownerId = req.userId; // <-- CHANGED
-    const group = new Group({ name, type, owner: ownerId, collaborators: type === "collab" ? [ownerId] : [] });
+    const group = new Group({ name, type, owner: req.userId, collaborators: type === 'collab' ? [req.userId] : [] });
     await group.save();
     res.status(201).json({ ...group.toObject(), id: group._id });
-  } catch (err) {
-    console.error("POST /api/groups Error:", err);
-    res.status(500).json({ error: "Failed to create group" });
-  }
 });
 
 apiRouter.delete("/groups/:id", async (req, res) => {
-  try {
-    const groupId = req.params.id;
-    const userId = req.userId; // <-- CHANGED
-    const group = await Group.findOne({ _id: groupId, owner: userId });
-    if (!group) {
-      return res.status(403).json({ error: "You are not the owner of this group" });
-    }
-    await Task.updateMany({ group: groupId }, { $set: { group: null } });
-    await Group.findByIdAndDelete(groupId);
-    res.json({ message: "Group deleted. Tasks are now ungrouped." });
-  } catch (err) {
-    console.error("DELETE /api/groups Error:", err);
-    res.status(500).json({ error: "Failed to delete group" });
-  }
+    const group = await Group.findOneAndDelete({ _id: req.params.id, owner: req.userId });
+    if (!group) return res.status(403).json({ error: "Not authorized" });
+    await Task.updateMany({ group: req.params.id }, { group: null });
+    res.json({ message: "Deleted" });
 });
 
 apiRouter.post("/groups/:id/collaborators", async (req, res) => {
-  // (This logic is unchanged, it's just protected by the JWT middleware)
-  try {
-    const groupId = req.params.id;
-    const { email } = req.body;
-    const userToAdd = await User.findOne({ email });
-    if (!userToAdd) {
-      return res.status(404).json({ error: "User with that email not found" });
-    }
-    const group = await Group.findById(groupId);
-    if (!group) return res.status(404).json({ error: "Group not found" });
-    if (group.type !== "collab") {
-      return res.status(400).json({ error: "Group is not collaborative" });
-    }
-    await Group.findByIdAndUpdate(groupId, { $addToSet: { collaborators: userToAdd._id } });
-    res.json({ message: "Collaborator added" });
-  } catch (err) {
-    console.error("POST /api/collaborators Error:", err);
-    res.status(500).json({ error: "Failed to add collaborator" });
-  }
+    const user = await User.findOne({ email: req.body.email });
+    if (!user) return res.status(404).json({ error: "User not found" });
+    await Group.updateOne({ _id: req.params.id, type: "collab" }, { $addToSet: { collaborators: user._id } });
+    res.json({ message: "Added" });
 });
 
-// --- Task Routes ---
 apiRouter.post("/tasks", async (req, res) => {
-  try {
-    const { name, date, time, priority, groupId } = req.body;
-    const task = new Task({
-      name, date, time, priority,
-      group: groupId || null,
-      owner: req.userId, // <-- CHANGED
-      createdAt: Date.now(),
-    });
+    const task = new Task({ ...req.body, owner: req.userId, group: req.body.groupId || null });
     await task.save();
     res.status(201).json({ ...task.toObject(), id: task._id });
-  } catch (err) {
-    console.error("POST /api/tasks Error:", err);
-    res.status(500).json({ error: "Failed to create task" });
-  }
 });
 
 apiRouter.put("/tasks/:id", async (req, res) => {
-  // (This logic is unchanged)
-  try {
-    const { name, date, time, priority, groupId, done } = req.body;
-    const updateData = { name, date, time, priority, group: groupId, done };
-    Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);
-    if (updateData.groupId === "") updateData.group = null;
-    const task = await Task.findByIdAndUpdate(req.params.id, updateData, { new: true });
-    if (!task) return res.status(404).json({ error: "Task not found" });
+    const { groupId, ...rest } = req.body;
+    const update = { ...rest, group: groupId || null };
+    const task = await Task.findByIdAndUpdate(req.params.id, update, { new: true });
     res.json({ ...task.toObject(), id: task._id });
-  } catch (err) {
-    console.error("PUT /api/tasks Error:", err);
-    res.status(500).json({ error: "Failed to update task" });
-  }
 });
 
 apiRouter.delete("/tasks/:id", async (req, res) => {
-  try {
     const task = await Task.findById(req.params.id);
-    if (!task) return res.status(404).json({ error: "Task not found" });
-    await new DeletedTask({ taskData: task, owner: req.userId }).save(); // <-- CHANGED
-    await Task.findByIdAndDelete(req.params.id);
-    res.json({ message: "Task deleted" });
-  } catch (err) {
-    console.error("DELETE /api/tasks Error:", err);
-    res.status(500).json({ error: "Failed to delete task" });
-  }
-});
-
-apiRouter.post("/tasks/:id/undo", async (req, res) => {
-  try {
-    const taskId = req.params.id;
-    const deleted = await DeletedTask.findOne({
-      "taskData._id": taskId,
-      owner: req.userId, // <-- CHANGED
-    }).sort({ expiresAt: -1 });
-    if (!deleted) {
-      return res.status(404).json({ error: "Undo data not found or expired" });
+    if (task) {
+        await new DeletedTask({ taskData: task, owner: req.userId }).save();
+        await Task.findByIdAndDelete(req.params.id);
     }
-    const restoredTask = new Task(deleted.taskData);
-    await restoredTask.save();
-    await DeletedTask.findByIdAndDelete(deleted._id);
-    res.json({ message: "Task restored", task: restoredTask });
-  } catch (err) {
-    console.error("POST /api/undo Error:", err);
-    res.status(500).json({ error: "Failed to restore task" });
-  }
+    res.json({ message: "Deleted" });
 });
 
 apiRouter.delete("/tasks/completed", async (req, res) => {
-  try {
-    const userId = req.userId; // <-- CHANGED
-    const userGroups = await Group.find({ $or: [{ owner: userId }, { collaborators: userId }] });
-    const groupIds = userGroups.map((g) => g._id);
-    const result = await Task.deleteMany({
-      done: true,
-      $or: [{ owner: userId }, { group: { $in: groupIds } }],
-    });
-    res.json({ message: `${result.deletedCount} completed tasks cleared` });
-  } catch (err) {
-    console.error("DELETE /api/completed Error:", err);
-    res.status(500).json({ error: "Failed to clear completed tasks" });
-  }
+    // Basic implementation clearing user's completed tasks
+    await Task.deleteMany({ owner: req.userId, done: true });
+    res.json({ message: "Cleared" });
 });
 
-// --- SERVER START ---
 const PORT = 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
