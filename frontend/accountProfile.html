@@ -291,7 +291,7 @@
         if (!headers) return;
 
         try {
-            const res = await fetch(`http://localhost:5000/auth/profile`, {
+            const res = await fetch(`https://cmsc128-webapp.onrender.com/auth/profile`, {
                 method: 'GET',
                 headers: headers
             });
@@ -349,7 +349,7 @@
         }
 
         try {
-            const res = await fetch(`http://localhost:5000/auth/profile`, {
+            const res = await fetch(`https://cmsc128-webapp.onrender.com/auth/profile`, {
                 method: 'PUT',
                 headers: headers,
                 body: JSON.stringify(body)
