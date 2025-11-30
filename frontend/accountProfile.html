@@ -233,7 +233,7 @@
     function getAuthHeaders() {
         const token = localStorage.getItem("token");
         if (!token) {
-            window.location.href = "loginRegister.html";
+            window.location.replace('index.html');
             return null;
         }
         return {
@@ -283,7 +283,7 @@
     // --- Load user data on page load ---
     async function loadProfile() {
         if (!userId) {
-            window.location.href = "loginRegister.html";
+            window.location.replace('index.html');
             return;
         }
         
@@ -306,7 +306,7 @@
             console.error(err);
             localStorage.removeItem("token");
             localStorage.removeItem("userId");
-            window.location.href = "loginRegister.html";
+            window.location.replace('index.html');
         }
     }
     
@@ -365,7 +365,7 @@
             showModal("Success", "Profile updated successfully! Please log in again.", () => {
                 localStorage.removeItem("token"); // Optional: force re-login for security
                 localStorage.removeItem("userId");
-                window.location.href = "loginRegister.html";
+                window.location.replace('index.html');
             });
 
         } catch (err) {
@@ -383,7 +383,7 @@
     document.getElementById('logoutBtn').addEventListener('click', () => {
         localStorage.removeItem("token");
         localStorage.removeItem("userId");
-        window.location.href = "loginRegister.html";
+        window.location.replace('index.html');
     });
 
     // --- Initial Load ---
