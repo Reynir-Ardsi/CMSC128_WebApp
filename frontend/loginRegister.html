@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Account Management</title>
+<style>
+:root {
+    --background: #0B1120;
+    --surface: #1e293b;
+    --accent: #2563EB;
+    --accent-hover: #3B82F6;
+    --text-primary: #F1F5F9;
+    --text-secondary: #94A3B8;
+    --input-bg: #0F172A;
+    --border: #334155;
+    --shadow: rgba(0, 0, 0, 0.6);
+}
+
+body {
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: var(--background);
+    color: var(--text-primary);
+}
+
+.container {
+    background: var(--surface);
+    border-radius: 12px;
+    box-shadow: 0 8px 24px var(--shadow);
+    padding: 32px;
+    width: 360px;
+    transition: all 0.4s ease;
+}
+
+h2 {
+    text-align: center;
+    margin-top: 0;
+    margin-bottom: 24px;
+    color: var(--text-primary);
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+}
+
+input, select {
+    padding: 12px;
+    margin-bottom: 14px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--input-bg);
+    color: var(--text-primary);
+    font-size: 14px;
+    outline: none;
+    transition: 0.2s ease;
+}
+
+input:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.3);
+}
+
+button {
+    padding: 12px;
+    background: var(--accent);
+    border: none;
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s ease, transform 0.15s ease;
+}
+
+button:hover {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+}
+
+.toggle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 14px;
+    font-size: 14px;
+}
+
+.toggle a {
+    color: var(--accent-hover);
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.2s;
+}
+
+.toggle a:hover {
+    color: #a9c8ff;
+}
+
+/* Modal Overlay */
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 900;
+    display: none;
+}
+
+/* Forgot Password Modal */
+#forget-container {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) translateY(15px);
+    z-index: 1000;
+    width: 360px;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px var(--shadow);
+    padding: 32px;
+    background: var(--surface);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+#forget-container.active {
+    opacity: 1;
+    transform: translate(-50%, -50%) translateY(0);
+    pointer-events: auto;
+}
+
+/* Helper for multi-step visibility */
+.hidden {
+    display: none !important;
+}
+
+/* Custom Alert Popup */
+#alertOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1900;
+    display: none;
+}
+
+#alert-container {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) translateY(15px);
+    z-index: 2000;
+    width: 340px;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px var(--shadow);
+    padding: 32px;
+    background: var(--surface);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    text-align: center;
+}
+
+#alert-container.active {
+    opacity: 1;
+    transform: translate(-50%, -50%) translateY(0);
+    pointer-events: auto;
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-container" class="container">
+    <h2>Login</h2>
+    <form id="loginForm">
+        <input type="email" id="login-email" placeholder="Email" required />
+        <input type="password" id="login-password" placeholder="Password" required />
+        <button type="submit">Login</button>
+    </form>
+    <div class="toggle">
+        <a href="#" id="to-register">Register</a>
+        <a href="#" id="to-forget">Forgot Password?</a>
+    </div>
+</div>
+
+<!-- REGISTER -->
+<div id="register-container" class="container" style="display:none;">
+    <h2>Register</h2>
+    <form id="registerForm">
+        <input type="text" id="register-name" placeholder="Full Name" required />
+        <input type="email" id="register-email" placeholder="Email" required />
+        <input type="password" id="register-password" placeholder="Password" required />
+        <input type="password" id="register-confirm" placeholder="Confirm Password" required />
+        
+        <!-- Restored Security Question -->
+        <select id="register-question" required>
+            <option value="">Select a Security Question</option>
+            <option value="What is your first pet’s name?">What is your first pet’s name?</option>
+            <option value="What is the name of your elementary school?">What is the name of your elementary school?</option>
+            <option value="What is your favorite color?">What is your favorite color?</option>
+            <option value="What city were you born in?">What city were you born in?</option>
+        </select>
+        <input type="text" id="register-answer" placeholder="Your Answer" required />
+        
+        <button type="submit">Sign Up</button>
+    </form>
+    <div class="toggle" style="justify-content:center;">
+        <a href="#" id="to-login">Back to Login</a>
+    </div>
+</div>
+
+<!-- FORGOT PASSWORD OVERLAY -->
+<div class="overlay" id="forgetOverlay"></div>
+<div id="forget-container">
+    <h2 id="forget-title">Reset Password</h2>
+    
+    <!-- Step 1: Email -->
+    <form id="fp-step-1">
+        <input type="email" id="fp-email" placeholder="Enter your email" required />
+        <button type="submit">Continue</button>
+    </form>
+
+    <!-- Step 2: Question -->
+    <form id="fp-step-2" class="hidden">
+        <p id="fp-question-text" style="color:var(--text-secondary); margin-bottom:12px;"></p>
+        <input type="text" id="fp-answer" placeholder="Your answer" required />
+        <button type="submit">Verify</button>
+    </form>
+
+    <!-- Step 3: New Password -->
+    <form id="fp-step-3" class="hidden">
+        <input type="password" id="fp-new-pass" placeholder="New password" required />
+        <button type="submit">Reset Password</button>
+    </form>
+
+    <div class="toggle" style="justify-content:center;">
+        <a href="#" id="close-forget">Back to Login</a>
+    </div>
+</div>
+
+<!-- ALERT MODAL -->
+<div class="overlay" id="alertOverlay"></div>
+<div id="alert-container">
+    <h2 id="alert-title">Notification</h2>
+    <div id="alert-message" style="margin-bottom: 20px; line-height: 1.6; color: var(--text-secondary);"></div>
+    <button id="alert-close-btn" style="width: 100%;">OK</button>
+</div>
+
+<script>
+// --- UTILS: Custom Alert ---
+const alertOverlay = document.getElementById("alertOverlay");
+const alertContainer = document.getElementById("alert-container");
+const alertMsg = document.getElementById("alert-message");
+const alertBtn = document.getElementById("alert-close-btn");
+
+function showAlert(msg) {
+    alertMsg.textContent = msg;
+    alertOverlay.style.display = "block";
+    alertContainer.classList.add("active");
+}
+
+alertBtn.onclick = () => {
+    alertOverlay.style.display = "none";
+    alertContainer.classList.remove("active");
+};
+
+// --- DOM REFS ---
+const loginContainer = document.getElementById("login-container");
+const registerContainer = document.getElementById("register-container");
+const forgetContainer = document.getElementById("forget-container");
+const forgetOverlay = document.getElementById("forgetOverlay");
+
+// --- NAVIGATION ---
+document.getElementById("to-register").onclick = e => {
+    e.preventDefault();
+    loginContainer.style.display = "none";
+    registerContainer.style.display = "block";
+};
+
+document.getElementById("to-login").onclick = e => {
+    e.preventDefault();
+    registerContainer.style.display = "none";
+    loginContainer.style.display = "block";
+};
+
+// --- FORGOT PASSWORD LOGIC ---
+let fpState = { email: "", token: "" };
+
+const steps = [
+    document.getElementById("fp-step-1"),
+    document.getElementById("fp-step-2"),
+    document.getElementById("fp-step-3")
+];
+
+function showStep(index) {
+    steps.forEach((el, i) => {
+        if (i === index) el.classList.remove("hidden");
+        else el.classList.add("hidden");
+    });
+}
+
+function openForgetModal() {
+    fpState = { email: "", token: "" }; // Reset state
+    document.getElementById("fp-email").value = "";
+    document.getElementById("fp-answer").value = "";
+    document.getElementById("fp-new-pass").value = "";
+    document.getElementById("forget-title").textContent = "Reset Password";
+    
+    showStep(0); // Show email form
+    forgetOverlay.style.display = "block";
+    forgetContainer.classList.add("active");
+}
+
+function closeForgetModal() {
+    forgetOverlay.style.display = "none";
+    forgetContainer.classList.remove("active");
+}
+
+document.getElementById("to-forget").onclick = (e) => { e.preventDefault(); openForgetModal(); };
+document.getElementById("close-forget").onclick = (e) => { e.preventDefault(); closeForgetModal(); };
+
+// Step 1: Check Email
+document.getElementById("fp-step-1").onsubmit = async (e) => {
+    e.preventDefault();
+    const email = document.getElementById("fp-email").value.trim().toLowerCase();
+    
+    try {
+        const res = await fetch("http://localhost:5000/auth/forgot", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ email })
+        });
+        const data = await res.json();
+        
+        if (!res.ok) return showAlert(data.error);
+        
+        // Success: Move to Step 2
+        fpState.email = email;
+        document.getElementById("fp-question-text").textContent = data.question;
+        document.getElementById("forget-title").textContent = "Security Question";
+        showStep(1);
+    } catch (err) { showAlert("Network error"); }
+};
+
+// Step 2: Verify Answer
+document.getElementById("fp-step-2").onsubmit = async (e) => {
+    e.preventDefault();
+    const answer = document.getElementById("fp-answer").value.trim();
+    
+    try {
+        const res = await fetch("http://localhost:5000/auth/forgot/verify", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ email: fpState.email, answer })
+        });
+        const data = await res.json();
+        
+        if (!res.ok) return showAlert(data.error);
+        
+        // Success: Get reset token and move to Step 3
+        fpState.token = data.resetToken;
+        document.getElementById("forget-title").textContent = "New Password";
+        showStep(2);
+    } catch (err) { showAlert("Network error"); }
+};
+
+// Step 3: Reset Password
+document.getElementById("fp-step-3").onsubmit = async (e) => {
+    e.preventDefault();
+    const newPassword = document.getElementById("fp-new-pass").value;
+    
+    try {
+        const res = await fetch("http://localhost:5000/auth/forgot/reset", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ resetToken: fpState.token, newPassword })
+        });
+        const data = await res.json();
+        
+        if (!res.ok) return showAlert(data.error);
+        
+        showAlert("Password reset successfully! Please login.");
+        closeForgetModal();
+    } catch (err) { showAlert("Network error"); }
+};
+
+// --- LOGIN ---
+document.getElementById("loginForm").onsubmit = async (e) => {
+    e.preventDefault();
+    const email = document.getElementById("login-email").value.trim().toLowerCase();
+    const password = document.getElementById("login-password").value;
+
+    try {
+        const res = await fetch("http://localhost:5000/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.token) {
+            localStorage.setItem("token", data.token);
+            localStorage.setItem("userId", data.userId);
+            window.location.replace('todoDashboard.html');
+        } else {
+            showAlert(data.error || "Login failed");
+        }
+    } catch (err) { showAlert("Network error"); }
+};
+
+// --- REGISTER ---
+document.getElementById("registerForm").onsubmit = async (e) => {
+    e.preventDefault();
+    const name = document.getElementById("register-name").value.trim();
+    const email = document.getElementById("register-email").value.trim().toLowerCase();
+    const password = document.getElementById("register-password").value;
+    const confirm = document.getElementById("register-confirm").value;
+    const question = document.getElementById("register-question").value;
+    const answer = document.getElementById("register-answer").value.trim();
+
+    if (password !== confirm) return showAlert("Passwords do not match");
+
+    try {
+        const res = await fetch("http://localhost:5000/auth/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name, email, password, question, answer })
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+            showAlert("Account registered! Login now.");
+            registerContainer.style.display = "none";
+            loginContainer.style.display = "block";
+            document.getElementById("registerForm").reset();
+        } else {
+            showAlert(data.error || "Registration failed");
+        }
+    } catch (err) { showAlert("Network error"); }
+};
+</script>
+</body>
+</html>
