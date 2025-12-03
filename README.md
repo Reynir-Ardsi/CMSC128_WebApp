@@ -1,4 +1,10 @@
 # CMSC 128_WebApp
+
+Online Deployment:
+# https://cmsc-128-web-app.vercel.app
+# Frontend: Vercel
+# Backend:  Render
+
 Collaborative To-Do List Web Application
 A full-stack web application designed for managing personal tasks and collaborative projects. This application features a secure authentication system, real-time task management, and the ability to create shared groups for team collaboration.
 
