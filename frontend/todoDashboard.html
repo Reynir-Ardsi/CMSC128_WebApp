@@ -958,16 +958,32 @@ async function performDeleteGroup(groupId) {
     } catch (err) { alert("Failed to delete group"); }
 }
 
-async function clearCompletedTasks() {
-    if (!confirm("Delete all completed tasks?")) return;
-    const headers = getAuthHeaders();
-    if (!headers) return;
-    try {
-        const res = await fetch(`${API_URL}/api/tasks/completed`, { method: "DELETE", headers });
-        if (!res.ok) throw new Error("Failed");
-        state.tasks = state.tasks.filter(t => !t.done);
-        renderTasks();
-    } catch (err) { alert("Error clearing tasks"); }
+// Remove the 'async' keyword from the outer function because showConfirm handles the flow now
+function clearCompletedTasks() {
+    // Check if there are actually completed tasks to clear before showing modal
+    const hasCompleted = state.tasks.some(t => t.done);
+    if (!hasCompleted) return;
+
+    // Use your custom showConfirm modal instead of window.confirm
+    showConfirm("Clear Completed", "Are you sure you want to delete all completed tasks?", async () => {
+        const headers = getAuthHeaders();
+        if (!headers) return;
+        
+        try {
+            const res = await fetch(`${API_URL}/api/tasks/completed`, { method: "DELETE", headers });
+            if (!res.ok) throw new Error("Failed");
+            
+            // Update local state
+            state.tasks = state.tasks.filter(t => !t.done);
+            renderTasks();
+            
+            // Hide the 'Clear completed' button since none are left
+            clearCompletedBtn.style.display = 'none';
+            
+        } catch (err) { 
+            alert("Error clearing tasks"); 
+        }
+    });
 }
 
 // --- EVENT LISTENERS ---

@@ -334,18 +334,29 @@
         }
     });
 
-    // --- Save Changes (With Modal) ---
-    document.getElementById('saveBtn').addEventListener('click', async () => {
+document.getElementById('saveBtn').addEventListener('click', async () => {
         const headers = getAuthHeaders();
         if (!headers) return;
 
         const name = nameField.value.trim();
         const email = emailField.value.trim();
         const password = passwordField.value;
+        const securityQuestion = document.getElementById('securityQuestion').value;
+        const securityAnswer = document.getElementById('securityAnswer').value;
 
         const body = { name, email };
+        
         if (password) { 
             body.password = password;
+        }
+        
+        // 2. Add them to the body object if they exist
+        // Note: The backend expects the answer field to be named 'answer', not 'securityAnswer'
+        if (securityQuestion) {
+            body.securityQuestion = securityQuestion;
+        }
+        if (securityAnswer) {
+            body.answer = securityAnswer; 
         }
 
         try {
@@ -361,16 +372,14 @@
                 throw new Error(data.error || "Failed to save");
             }
 
-            // SUCCESS: Show modal, then redirect on OK click
             showModal("Success", "Profile updated successfully! Please log in again.", () => {
-                localStorage.removeItem("token"); // Optional: force re-login for security
+                localStorage.removeItem("token");
                 localStorage.removeItem("userId");
                 window.location.replace('index.html');
             });
 
         } catch (err) {
             console.error(err);
-            // ERROR: Show modal, stay on page
             showModal("Error", err.message);
         }
     });
