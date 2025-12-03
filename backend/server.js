@@ -23,7 +23,7 @@ const UserSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true, lowercase: true },
   password: { type: String, required: true },
   securityQuestion: String,
-  securityAnswer: String,
+  answer: String,
 });
 
 const GroupSchema = new mongoose.Schema({
@@ -75,9 +75,9 @@ const isAuthenticated = (req, res, next) => {
 app.post("/auth/register", async (req, res) => {
     try {
         // 1. Receive the new fields
-        const { name, email, password, securityQuestion, securityAnswer } = req.body;
+        const { name, email, password, securityQuestion, answer } = req.body;
 
-        if (!name || !email || !password || !securityQuestion || !securityAnswer) {
+        if (!name || !email || !password || !securityQuestion || !answer) {
             return res.status(400).json({ error: "All fields are required" });
         }
         const existing = await User.findOne({ email });
@@ -85,7 +85,7 @@ app.post("/auth/register", async (req, res) => {
 
         // 2. Hash the Password AND the Security Answer
         const hashedPassword = await bcrypt.hash(password, 10);
-        const hashedAnswer = await bcrypt.hash(securityAnswer, 10);
+        const hashedAnswer = await bcrypt.hash(answer, 10);
 
         // 3. Save to database
         const user = new User({ 
@@ -93,7 +93,7 @@ app.post("/auth/register", async (req, res) => {
             email, 
             password: hashedPassword,
             securityQuestion,
-            securityAnswer: hashedAnswer // Save the encrypted answer
+            answer: hashedAnswer // Save the encrypted answer
         });
         
         await user.save();
@@ -140,7 +140,7 @@ app.post("/auth/forgot/verify", async (req, res) => {
     try {
         const { email, answer } = req.body;
         const user = await User.findOne({ email });
-        if (!user || user.securityAnswer.toLowerCase().trim() !== answer.toLowerCase().trim()) {
+        if (!user || user.answer.toLowerCase().trim() !== answer.toLowerCase().trim()) {
             return res.status(401).json({ error: "Incorrect answer" });
         }
         const resetToken = jwt.sign({ userId: user._id, purpose: "reset_password" }, process.env.JWT_SECRET || "secret", { expiresIn: '10m' });
@@ -170,7 +170,7 @@ app.get("/auth/profile", isAuthenticated, async (req, res) => {
 app.put("/auth/profile", isAuthenticated, async (req, res) => {
   try {
     // 1. Destructure the new fields from the request
-    const { name, email, password, securityQuestion, securityAnswer } = req.body;
+    const { name, email, password, securityQuestion, answer } = req.body;
     
     const updateData = { name, email };
 
@@ -185,13 +185,13 @@ app.put("/auth/profile", isAuthenticated, async (req, res) => {
     }
 
     // 4. Hash the Security Answer if provided (Fixes encryption issue)
-    if (securityAnswer) {
-      updateData.securityAnswer = await bcrypt.hash(securityAnswer, 10);
+    if (answer) {
+      updateData.answer = await bcrypt.hash(answer, 10);
     }
 
     const user = await User.findByIdAndUpdate(req.userId, updateData, {
       new: true,
-    }).select("-password -securityAnswer"); // Exclude sensitive data from response
+    }).select("-password -answer"); // Exclude sensitive data from response
 
     if (!user) return res.status(404).json({ error: "User not found" });
 
