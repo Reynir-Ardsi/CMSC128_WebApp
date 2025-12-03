@@ -418,35 +418,48 @@ document.getElementById("loginForm").onsubmit = async (e) => {
     } catch (err) { showAlert("Network error"); }
 };
 
-// --- REGISTER ---
-document.getElementById("registerForm").onsubmit = async (e) => {
+
+//--Register--
+document.getElementById("registerForm").onsubmit = async e => {
     e.preventDefault();
     const name = document.getElementById("register-name").value.trim();
     const email = document.getElementById("register-email").value.trim().toLowerCase();
     const password = document.getElementById("register-password").value;
     const confirm = document.getElementById("register-confirm").value;
-    const question = document.getElementById("register-question").value;
-    const answer = document.getElementById("register-answer").value.trim();
+    
+    // 1. Get the values (Uncommented these lines)
+    const securityQuestion = document.getElementById("register-question").value;
+    const securityAnswer = document.getElementById("register-answer").value.trim().toLowerCase();
 
-    if (password !== confirm) return showAlert("Passwords do not match");
+    if (password !== confirm) return alert("❌ Passwords do not match");
 
     try {
         const res = await fetch("https://cmsc128-webapp.onrender.com/auth/register", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name, email, password, question, answer })
+            // 2. Include them in the JSON body
+            body: JSON.stringify({ 
+                name, 
+                email, 
+                password, 
+                securityQuestion, 
+                securityAnswer 
+            })
         });
         const data = await res.json();
 
         if (res.ok) {
-            showAlert("Account registered! Login now.");
+            alert("✅ Account registered! Login now.");
             registerContainer.style.display = "none";
             loginContainer.style.display = "block";
             document.getElementById("registerForm").reset();
         } else {
-            showAlert(data.error || "Registration failed");
+            alert("❌ " + (data.error || "Registration failed"));
         }
-    } catch (err) { showAlert("Network error"); }
+    } catch (err) {
+        console.error(err);
+        alert("⚠️ Network error");
+    }
 };
 </script>
 </body>

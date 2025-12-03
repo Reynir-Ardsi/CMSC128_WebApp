@@ -73,29 +73,37 @@ const isAuthenticated = (req, res, next) => {
 // ================================
 
 app.post("/auth/register", async (req, res) => {
-  try {
-    const { name, email, password, question, answer } = req.body;
-    if (!email || !password || !name) return res.status(400).json({ error: "Missing fields" });
-    
-    const existing = await User.findOne({ email });
-    if (existing) return res.status(400).json({ error: "Email already exists" });
+    try {
+        // 1. Receive the new fields
+        const { name, email, password, securityQuestion, securityAnswer } = req.body;
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const user = new User({ 
-        name, 
-        email, 
-        password: hashedPassword,
-        securityQuestion: question, 
-        securityAnswer: answer 
-    });
-    
-    await user.save();
-    res.status(201).json({ message: "User registered successfully" });
-  } catch (err) {
-    console.error("Register Error:", err);
-    res.status(500).json({ error: "Server error" });
-  }
+        if (!name || !email || !password || !securityQuestion || !securityAnswer) {
+            return res.status(400).json({ error: "All fields are required" });
+        }
+        const existing = await User.findOne({ email });
+        if (existing) return res.status(400).json({ error: "Email already exists" });
+
+        // 2. Hash the Password AND the Security Answer
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedAnswer = await bcrypt.hash(securityAnswer, 10);
+
+        // 3. Save to database
+        const user = new User({ 
+            name, 
+            email, 
+            password: hashedPassword,
+            securityQuestion,
+            securityAnswer: hashedAnswer // Save the encrypted answer
+        });
+        
+        await user.save();
+        res.status(201).json({ message: "User registered successfully" });
+    } catch (err) {
+        console.error("Register Error:", err);
+        res.status(500).json({ error: "Server error" });
+    }
 });
+
 
 app.post("/auth/login", async (req, res) => {
   try {
@@ -161,12 +169,37 @@ app.get("/auth/profile", isAuthenticated, async (req, res) => {
 
 app.put("/auth/profile", isAuthenticated, async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    // 1. Destructure the new fields from the request
+    const { name, email, password, securityQuestion, securityAnswer } = req.body;
+    
     const updateData = { name, email };
-    if (password) updateData.password = await bcrypt.hash(password, 10);
-    const user = await User.findByIdAndUpdate(req.userId, updateData, { new: true }).select("-password");
-    res.json({ message: "Updated", user });
-  } catch (err) { res.status(400).json({ error: "Update failed" }); }
+
+    // 2. Hash the password if provided
+    if (password) {
+      updateData.password = await bcrypt.hash(password, 10);
+    }
+
+    // 3. Update Security Question
+    if (securityQuestion) {
+      updateData.securityQuestion = securityQuestion;
+    }
+
+    // 4. Hash the Security Answer if provided (Fixes encryption issue)
+    if (securityAnswer) {
+      updateData.securityAnswer = await bcrypt.hash(securityAnswer, 10);
+    }
+
+    const user = await User.findByIdAndUpdate(req.userId, updateData, {
+      new: true,
+    }).select("-password -securityAnswer"); // Exclude sensitive data from response
+
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    res.json({ message: "Account updated successfully", user });
+  } catch (err) {
+    console.error("Profile Update Error:", err);
+    res.status(400).json({ error: "Failed to update account" });
+  }
 });
 
 // --- DATA ROUTES (Groups/Tasks) ---
@@ -215,6 +248,40 @@ apiRouter.post("/groups", async (req, res) => {
         .populate('collaborators', 'name email');
 
     res.status(201).json({ ...populatedGroup.toObject(), id: group._id });
+});
+
+// Update Group (Name or Type)
+apiRouter.put("/groups/:id", async (req, res) => {
+  try {
+    const { name, type } = req.body;
+    // Find the group and ensure the current user is the owner
+    const group = await Group.findOne({ _id: req.params.id, owner: req.userId });
+
+    if (!group) {
+      return res.status(404).json({ error: "Group not found or you are not the owner" });
+    }
+
+    // Update fields
+    if (name) group.name = name;
+    if (type) group.type = type;
+
+    // Logic to handle switching types
+    if (type === 'personal') {
+        // Optional: Clear collaborators if switching back to personal
+        group.collaborators = [];
+    } else if (type === 'collab') {
+        // Ensure owner is listed as a collaborator if switching to collab
+        if (!group.collaborators.includes(req.userId)) {
+            group.collaborators.push(req.userId);
+        }
+    }
+
+    await group.save();
+    res.json({ ...group.toObject(), id: group._id });
+  } catch (err) {
+    console.error("PUT /api/groups Error:", err);
+    res.status(500).json({ error: "Failed to update group" });
+  }
 });
 
 apiRouter.delete("/groups/:id", async (req, res) => {
