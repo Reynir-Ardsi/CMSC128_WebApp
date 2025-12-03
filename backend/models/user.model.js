@@ -9,19 +9,30 @@ const userSchema = new mongoose.Schema({
   securityAnswer: { type: String, required: true },
 }, { timestamps: true });
 
-// Hash password before saving
+// Hash password and security answer before saving
 userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) {
+  // If neither password nor security answer is modified, skip hashing
+  if (!this.isModified('password') && !this.isModified('securityAnswer')) {
     return next();
   }
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-  
-  // Also hash security answer if it's being modified
-  if (this.isModified('securityAnswer')) {
-     this.securityAnswer = await bcrypt.hash(this.securityAnswer, salt);
+
+  try {
+    const salt = await bcrypt.genSalt(10);
+
+    // Hash password if modified
+    if (this.isModified('password')) {
+      this.password = await bcrypt.hash(this.password, salt);
+    }
+    
+    // Hash security answer if modified
+    if (this.isModified('securityAnswer')) {
+       this.securityAnswer = await bcrypt.hash(this.securityAnswer, salt);
+    }
+    
+    next();
+  } catch (error) {
+    next(error);
   }
-  next();
 });
 
 // Method to compare entered password with hashed password
