@@ -149,7 +149,28 @@
     .dropdown-item:hover { background: rgba(255,255,255,0.05); color: var(--text); }
     .dropdown-item.active { color: var(--primary-2); font-weight: 600; background: rgba(59,130,246,0.1); }
 
-    /* COLLAB SPECIFIC STYLES */
+    #btnClearCompleted {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        z-index: 800;
+        background: var(--surface); 
+        color: var(--text);
+        border: 1px solid rgba(255,255,255,0.1);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+        padding: 12px 16px;
+        font-weight: 600;
+        display: none;
+        border-radius: 8px;
+        transition: transform 0.2s ease, background 0.2s ease;
+    }
+    #btnClearCompleted:hover {
+        background: var(--panel);
+        border-color: var(--danger);
+        color: var(--danger);
+        transform: translateY(-2px);
+    }
+
     #collabSearchDropdown {
         top: 100%;
         left: 0;
@@ -184,106 +205,109 @@
 <div class="app">
 
 <aside class="sidebar" aria-label="Sidebar">
-  <div class="sidebar-inner">
+    <div class="sidebar-inner">
     <div class="title-row">
-      <h1>To Do</h1>
-      <button class="profile-btn" title="Profile">Profile</button>
+        <h1>To Do</h1>
+        <button class="profile-btn" title="Profile">Profile</button>
     </div>
 
-  <div class="group-summary" id="btnAllTasks">
-    <div class="flex center gap6">
-      <strong>All Tasks</strong>
-      <span class="muted" id="all-count">(0)</span>
+    <div class="group-summary" id="btnAllTasks">
+        <div class="flex center gap6">
+        <strong>All Tasks</strong>
+        <span class="muted" id="all-count">(0)</span>
+        </div>
     </div>
-  </div>
 
-  <details open>
-    <summary>
-      <div class="flex center gap6">
-        <strong>Personal</strong>
-        <span class="muted" id="personal-count">(0)</span>
-      </div>
-      <div class="muted">⌄</div>
-    </summary>
-    <div class="groups-list" id="personalGroups"></div>
-  </details>
+    <details open>
+        <summary>
+        <div class="flex center gap6">
+            <strong>Personal</strong>
+            <span class="muted" id="personal-count">(0)</span>
+        </div>
+        <div class="muted">⌄</div>
+        </summary>
+        <div class="groups-list" id="personalGroups"></div>
+    </details>
 
-  <details open>
-    <summary>
-      <div class="flex center gap6">
-        <strong>Collaborative</strong>
-        <span class="muted" id="collab-count">(0)</span>
-      </div>
-      <div class="muted">⌄</div>
-    </summary>
-    <div class="groups-list" id="collabGroups"></div>
-  </details>
+    <details open>
+        <summary>
+        <div class="flex center gap6">
+            <strong>Collaborative</strong>
+            <span class="muted" id="collab-count">(0)</span>
+        </div>
+        <div class="muted">⌄</div>
+        </summary>
+        <div class="groups-list" id="collabGroups"></div>
+    </details>
 
-  <div class="add-group-wrap">
-    <button class="add-group-btn" id="btnAddGroup">+ Add Task Group</button>
-  </div>
+    <div class="add-group-wrap">
+        <button class="add-group-btn" id="btnAddGroup">+ Add Task Group</button>
+    </div>
 </aside>
 
 <main class="main" aria-label="Main content">
-  <div class="main-top">
-    <div>
-      <h2 id="selectedGroupTitle" style="margin:0">All tasks</h2>
-      <div class="muted" id="selectedGroupMeta">Showing all tasks</div>
+    <div class="main-top">
+        <div>
+        <h2 id="selectedGroupTitle" style="margin:0">All tasks</h2>
+        <div class="muted" id="selectedGroupMeta">Showing all tasks</div>
+        </div>
+        <div class="flex center gap6">
+        <div class="dropdown-wrap">
+            <button class="btn-ghost" id="btnSort">⇅ Sort</button>
+            <div class="dropdown-menu" id="sortMenu">
+                <div class="dropdown-item active" data-sort="newest">Date Added (Newest)</div>
+                <div class="dropdown-item" data-sort="oldest">Date Added (Oldest)</div>
+                <div class="dropdown-item" data-sort="due">Due Date</div>
+                <div class="dropdown-item" data-sort="priority">Priority</div>
+            </div>
+        </div>
+        
+        <button class="add-task-btn" id="btnAddTask">+ Add Task</button>
+        <button class="btn-primary" id="btnAddCollaboratorMain" style="display:none;">+ Add Collaborator</button>
+        </div>
     </div>
-    <div class="flex center gap6">
-      <div class="dropdown-wrap">
-          <button class="btn-ghost" id="btnSort">⇅ Sort</button>
-          <div class="dropdown-menu" id="sortMenu">
-              <div class="dropdown-item active" data-sort="newest">Date Added (Newest)</div>
-              <div class="dropdown-item" data-sort="oldest">Date Added (Oldest)</div>
-              <div class="dropdown-item" data-sort="due">Due Date</div>
-              <div class="dropdown-item" data-sort="priority">Priority</div>
-          </div>
-      </div>
-      
-      <button class="btn-ghost" id="btnClearCompleted" title="Clear completed" style="display: none;">Clear completed</button>
-      <button class="add-task-btn" id="btnAddTask">+ Add Task</button>
-      <button class="btn-primary" id="btnAddCollaboratorMain" style="display:none;">+ Add Collaborator</button>
-    </div>
-  </div>
 
-  <section class="task-area" id="taskArea" aria-live="polite"></section>
-
+    <section class="task-area" id="taskArea" aria-live="polite"></section>
 </main>
-</div> <div class="overlay" id="taskOverlay" aria-hidden="true">
-  <div class="modal">
-    <h2 id="taskModalTitle">Create Task</h2>
-    <div class="field">
-      <label class="muted">Task name</label>
-      <input id="modalTaskName" placeholder="E.g. Prepare slides" />
+</div> 
+
+<button id="btnClearCompleted" title="Clear completed">Clear completed tasks</button>
+
+
+<div class="overlay" id="taskOverlay" aria-hidden="true">
+    <div class="modal">
+        <h2 id="taskModalTitle">Create Task</h2>
+        <div class="field">
+        <label class="muted">Task name</label>
+        <input id="modalTaskName" placeholder="E.g. Prepare slides" />
+        </div>
+        <div class="row">
+        <div class="field"><label class="muted">Due date</label><input id="modalDueDate" type="date"/></div>
+        <div class="field"><label class="muted">Due time</label><input id="modalDueTime" type="time"/></div>
+        </div>
+        <div class="row">
+        <div class="field">
+            <label class="muted">Priority</label>
+            <select id="modalPriority"><option>Low</option><option>Mid</option><option>High</option></select>
+        </div>
+        <div class="field">
+            <label class="muted">Assign group</label>
+            <select id="modalGroup"></select>
+        </div>
+        </div>
+        <div class="actions">
+        <button class="btn-primary" id="saveTaskBtn">Save</button>
+        <button class="btn-ghost" id="cancelTaskBtn">Cancel</button>
+        </div>
     </div>
-    <div class="row">
-      <div class="field"><label class="muted">Due date</label><input id="modalDueDate" type="date"/></div>
-      <div class="field"><label class="muted">Due time</label><input id="modalDueTime" type="time"/></div>
-    </div>
-    <div class="row">
-      <div class="field">
-        <label class="muted">Priority</label>
-        <select id="modalPriority"><option>Low</option><option>Mid</option><option>High</option></select>
-      </div>
-      <div class="field">
-        <label class="muted">Assign group</label>
-        <select id="modalGroup"></select>
-      </div>
-    </div>
-    <div class="actions">
-      <button class="btn-primary" id="saveTaskBtn">Save</button>
-      <button class="btn-ghost" id="cancelTaskBtn">Cancel</button>
-    </div>
-  </div>
 </div>
 
 <div class="overlay" id="groupOverlay" aria-hidden="true">
-  <div class="modal">
-    <h2>Create Task Group</h2>
-    <div class="field">
-      <label class="muted">Group name</label>
-      <input id="modalGroupName" placeholder="E.g. Groceries" />
+    <div class="modal">
+    <h2>Create Task Group</h2>
+    <div class="field">
+        <label class="muted">Group name</label>
+        <input id="modalGroupName" placeholder="E.g. Groceries" />
     </div>
     <div class="field">
         <label class="muted">Type</label>
@@ -294,46 +318,57 @@
         <button class="btn-ghost" id="cancelGroupBtn">Cancel</button>
         <button class="btn-danger" id="deleteGroupBtn" style="display:none; margin-left: auto;">Delete</button>
     </div>
-  </div>
+    </div>
 </div>
 
 <div class="overlay" id="collabOverlay" aria-hidden="true">
-  <div class="modal" style="width: 400px;">
-    <h2>Manage Collaborators</h2>
-    <div class="muted" style="margin-bottom:12px">Search users to add to this group</div>
-    
-    <div class="field dropdown-wrap">
-      <input id="collabSearchInput" placeholder="Search by name or email..." autocomplete="off" />
-      <div class="dropdown-menu" id="collabSearchDropdown"></div>
-    </div>
-    <div class="actions">
-        <button class="btn-primary" id="addCollabBtn">Add Selected</button>
-        <button class="btn-ghost" id="closeCollabBtn">Close</button>
-    </div>
-
-    <div class="member-list" id="memberList">
+    <div class="modal" style="width: 400px;">
+        <h2>Manage Collaborators</h2>
+        <div class="muted" style="margin-bottom:12px">Search users to add to this group</div>
+        
+        <div class="field dropdown-wrap">
+        <input id="collabSearchInput" placeholder="Search by name or email..." autocomplete="off" />
+        <div class="dropdown-menu" id="collabSearchDropdown"></div>
         </div>
-  </div>
+        <div class="actions">
+            <button class="btn-primary" id="addCollabBtn">Add Selected</button>
+            <button class="btn-ghost" id="closeCollabBtn">Close</button>
+        </div>
+
+        <div class="member-list" id="memberList">
+            </div>
+    </div>
 </div>
 
-
 <div class="overlay" id="confirmOverlay" aria-hidden="true">
-  <div class="modal">
-    <h2 id="confirmTitle">Confirm</h2>
-    <div class="muted" id="confirmMessage">Are you sure?</div>
-    <div class="actions" style="margin-top:14px">
-      <button class="btn-danger" id="confirmYes">Yes</button>
-      <button class="btn-ghost" id="confirmNo">No</button>
+    <div class="modal">
+        <h2 id="confirmTitle">Confirm</h2>
+        <div class="muted" id="confirmMessage">Are you sure?</div>
+        <div class="actions" style="margin-top:14px">
+        <button class="btn-danger" id="confirmYes">Yes</button>
+        <button class="btn-ghost" id="confirmNo">No</button>
+        </div>
     </div>
-  </div>
+</div>
+
+<div class="overlay" id="alertOverlay" aria-hidden="true">
+    <div class="modal">
+        <h2 id="alertTitle">Notification</h2>
+        <div class="muted" id="alertMessage" style="margin-bottom:20px; line-height: 1.5;"></div>
+        <div class="actions">
+        <button class="btn-primary" id="alertCloseBtn" style="width: 100%;">OK</button>
+        </div>
+    </div>
 </div>
 
 <script>
 
 // --- CONFIGURATION ---
 const API_URL = "https://cmsc128-webapp.onrender.com";
+//https://cmsc128-webapp.onrender.com
 
-// --- STATE ---
+
+
 let state = {
     user: null,
     groups: [],
@@ -370,11 +405,30 @@ const addCollabBtn = document.getElementById("addCollabBtn");
 function showOverlay(id) { document.getElementById(id).classList.add("show"); }
 function hideOverlay(id) { document.getElementById(id).classList.remove("show"); }
 
+// --- CUSTOM ALERT UTILS ---
+function showAlert(message) {
+    document.getElementById("alertMessage").textContent = message;
+    showOverlay("alertOverlay");
+}
+document.getElementById("alertCloseBtn").addEventListener("click", () => hideOverlay("alertOverlay"));
+
+let deleteCallback = null;
+function showConfirm(title, message, callback) {
+    document.getElementById("confirmTitle").textContent = title;
+    document.getElementById("confirmMessage").textContent = message;
+    deleteCallback = callback;
+    showOverlay("confirmOverlay");
+}
+document.getElementById("confirmYes").addEventListener("click", () => {
+    if (deleteCallback) deleteCallback();
+    hideOverlay("confirmOverlay");
+});
+document.getElementById("confirmNo").addEventListener("click", () => hideOverlay("confirmOverlay"));
+
 function getAuthHeaders() {
     const token = localStorage.getItem("token");
     if (!token) {
         window.location.replace('index.html');
-        //window.location.href = "index.html"
         return null;
     }
     return {
@@ -412,7 +466,6 @@ async function loadUser() {
         localStorage.removeItem("token");
         localStorage.removeItem("userId");
         window.location.replace('index.html');
-        // window.location.href = "index.html"
     }
 }
 
@@ -566,8 +619,8 @@ function renderTasks() {
         return 0;
     });
 
-    const hasCompletedTasks = filteredTasks.some(t => t.done);
-    clearCompletedBtn.style.display = hasCompletedTasks ? 'inline-block' : 'none';
+    const visibleCompleted = filteredTasks.some(t => t.done);
+    clearCompletedBtn.style.display = visibleCompleted ? 'inline-block' : 'none';
 
     if (filteredTasks.length === 0) {
         taskArea.innerHTML = `<div class="muted" style="padding: 10px; text-align: center;">No tasks found.</div>`;
@@ -657,7 +710,7 @@ function populateGroupSelect() {
 }
 
 // --- COLLABORATOR LOGIC ---
-let selectedUserToAdd = null; // Track dropdown selection
+let selectedUserToAdd = null;
 
 // Search Input Listener
 collabSearchInput.addEventListener("input", async (e) => {
@@ -700,12 +753,10 @@ collabMainBtn.addEventListener("click", () => {
     const group = state.groups.find(g => g.id === state.selectedGroupId);
     if (!group) return;
     
-    // Reset state
     collabSearchInput.value = "";
     selectedUserToAdd = null;
     memberListEl.innerHTML = "";
     
-    // 1. DETERMINE OWNER & PERMISSIONS
     let ownerId = null;
     let ownerName = "Unknown";
     let ownerEmail = "";
@@ -725,9 +776,8 @@ collabMainBtn.addEventListener("click", () => {
     }
 
     const amIOwner = (state.user._id === ownerId);
-
-    // 2. RENDER OWNER ROW (Always first, Never deletable)
     const ownerRow = document.createElement("div");
+
     ownerRow.className = "member-item";
     ownerRow.style.borderLeft = "2px solid var(--primary)";
     ownerRow.innerHTML = `
@@ -738,12 +788,11 @@ collabMainBtn.addEventListener("click", () => {
     `;
     memberListEl.appendChild(ownerRow);
     
-    // 3. RENDER COLLABORATORS
     if (group.collaborators) {
         group.collaborators.forEach(u => {
             const uId = (u && typeof u === 'object') ? u._id : u;
             
-            // Skip owner if in list
+
             if (String(uId) === String(ownerId)) return;
 
             const row = document.createElement("div");
@@ -752,7 +801,6 @@ collabMainBtn.addEventListener("click", () => {
             const uName = (u && u.name) ? u.name : "Loading...";
             const uEmail = (u && u.email) ? u.email : "";
 
-            // Is this row "Me"?
             const isMe = (String(uId) === String(state.user._id));
 
             row.innerHTML = `
@@ -763,7 +811,6 @@ collabMainBtn.addEventListener("click", () => {
             `;
 
             // --- PERMISSION LOGIC ---
-            // Show button if: I am Owner OR It is Me (I want to leave)
             if (amIOwner || isMe) {
                 const delBtn = document.createElement("button");
                 delBtn.className = "btn-icon delete";
@@ -772,9 +819,9 @@ collabMainBtn.addEventListener("click", () => {
                 
                 delBtn.addEventListener("click", () => {
                     const msg = isMe ? "Are you sure you want to leave this group?" : "Remove this user from the group?";
-                    if(confirm(msg)) {
+                    showConfirm("Remove Collaborator", msg, () => {
                         removeCollaborator(group.id, uId);
-                    }
+                    });
                 });
                 row.appendChild(delBtn);
             }
@@ -788,7 +835,10 @@ collabMainBtn.addEventListener("click", () => {
 
 addCollabBtn.addEventListener("click", async () => {
     const email = collabSearchInput.value.trim();
-    if (!email) return alert("Please select a user or enter an email.");
+    if (!email) {
+        showAlert("Please select a user or enter an email.");
+        return;
+    }
     
     const headers = getAuthHeaders();
     if (!headers) return;
@@ -803,15 +853,13 @@ addCollabBtn.addEventListener("click", async () => {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Failed to add");
         
-        alert("Collaborator added!");
+        showAlert("Collaborator added!");
         hideOverlay("collabOverlay");
         await loadData();
-    } catch (err) { alert(err.message); }
+    } catch (err) { showAlert(err.message); }
 });
 
 async function removeCollaborator(groupId, userId) {
-    if(!confirm("Remove this user from the group?")) return;
-    
     const headers = getAuthHeaders();
     if (!headers) return;
 
@@ -825,7 +873,7 @@ async function removeCollaborator(groupId, userId) {
         
         hideOverlay("collabOverlay");
         await loadData();
-    } catch (err) { alert(err.message); }
+    } catch (err) { showAlert(err.message); }
 }
 
 // --- MODAL HANDLING ---
@@ -843,11 +891,11 @@ function openTaskModal(task = null) {
         document.getElementById("modalGroup").value = task.group ? task.group : "";
     } else {
         if (state.selectedGroupId === "all") {
-             document.getElementById("modalGroup").value = "";
+                document.getElementById("modalGroup").value = "";
         } else if (state.selectedGroupId === "unassigned") {
-             document.getElementById("modalGroup").value = "";
+                document.getElementById("modalGroup").value = "";
         } else {
-             document.getElementById("modalGroup").value = state.selectedGroupId;
+                document.getElementById("modalGroup").value = state.selectedGroupId;
         }
     }
     showOverlay("taskOverlay");
@@ -870,7 +918,10 @@ async function saveTask() {
     const name = document.getElementById("modalTaskName").value.trim();
     const groupVal = document.getElementById("modalGroup").value;
 
-    if (!name) return alert("Task name required.");
+    if (!name) {
+        showAlert("Task name required.");
+        return;
+    }
 
     const data = {
         name,
@@ -892,13 +943,16 @@ async function saveTask() {
         
         hideOverlay("taskOverlay");
         await loadData(); 
-    } catch (err) { alert("Failed to save task"); }
+    } catch (err) { showAlert("Failed to save task"); }
 }
 
 async function saveGroup() {
     const name = document.getElementById("modalGroupName").value.trim();
     const type = document.getElementById("modalGroupType").value;
-    if (!name) return alert("Group name required.");
+    if (!name) {
+        showAlert("Group name required.");
+        return;
+    }
     const data = { name, type };
 
     const headers = getAuthHeaders();
@@ -913,7 +967,7 @@ async function saveGroup() {
         
         hideOverlay("groupOverlay");
         await loadData();
-    } catch (err) { alert("Failed to save group"); }
+    } catch (err) { showAlert("Failed to save group"); }
 }
 
 async function toggleTaskDone(taskId, currentDoneState) {
@@ -943,7 +997,7 @@ async function deleteTask(taskId) {
         const res = await fetch(`${API_URL}/api/tasks/${taskId}`, { method: "DELETE", headers });
         if (!res.ok) throw new Error("Failed");
         await loadData();
-    } catch (err) { alert("Failed to delete task"); }
+    } catch (err) { showAlert("Failed to delete task"); }
 }
 
 async function performDeleteGroup(groupId) {
@@ -955,32 +1009,53 @@ async function performDeleteGroup(groupId) {
         hideOverlay("groupOverlay"); 
         if (state.selectedGroupId === groupId) state.selectedGroupId = "all";
         await loadData();
-    } catch (err) { alert("Failed to delete group"); }
+    } catch (err) { showAlert("Failed to delete group"); }
 }
 
-function clearCompletedTasks() {
-    const hasCompleted = state.tasks.some(t => t.done);
-    if (!hasCompleted) return;
+// --- CONTEXT AWARE CLEAR COMPLETED ---
+async function clearCompletedTasks() {
+    let tasksToDelete = state.tasks.filter(t => t.done);
+    let viewName = "All Tasks";
 
-    showConfirm("Clear Completed", "Are you sure you want to delete all completed tasks?", async () => {
-        const headers = getAuthHeaders();
-        if (!headers) return;
-        
-        try {
-            const res = await fetch(`${API_URL}/api/tasks/completed`, { method: "DELETE", headers });
-            if (!res.ok) throw new Error("Failed");
-            
-            // Update local state
-            state.tasks = state.tasks.filter(t => !t.done);
-            renderTasks();
-            
-            // Hide the 'Clear completed' button since none are left
-            clearCompletedBtn.style.display = 'none';
-            
-        } catch (err) { 
-            alert("Error clearing tasks"); 
+    if (state.selectedGroupId === "unassigned") {
+        tasksToDelete = tasksToDelete.filter(t => !t.group);
+        viewName = "Unassigned Tasks";
+    } else if (state.selectedGroupId !== "all") {
+        tasksToDelete = tasksToDelete.filter(t => t.group === state.selectedGroupId);
+        const grp = state.groups.find(g => g.id === state.selectedGroupId);
+        viewName = grp ? grp.name : "this group";
+    }
+
+    if (tasksToDelete.length === 0) {
+        showAlert("No completed tasks to clear in " + viewName);
+        return;
+    }
+
+    showConfirm(
+        "Clear Completed", 
+        `Delete ${tasksToDelete.length} completed task(s) from "${viewName}"?`, 
+        async () => {
+            const headers = getAuthHeaders();
+            if (!headers) return;
+
+            try {
+                const deletePromises = tasksToDelete.map(task => 
+                    fetch(`${API_URL}/api/tasks/${task.id}`, { 
+                        method: "DELETE", 
+                        headers 
+                    })
+                );
+
+                await Promise.all(deletePromises);
+                
+                // 4. Update UI
+                await loadData();
+                showAlert("Cleared completed tasks.");
+            } catch (err) { 
+                showAlert("Error clearing tasks"); 
+            }
         }
-    });
+    );
 }
 
 // --- EVENT LISTENERS ---
@@ -1012,20 +1087,6 @@ document.getElementById("btnAllTasks").addEventListener("click", () => selectGro
 document.querySelector(".profile-btn").addEventListener("click", () => { window.location.href = "accountProfile.html"; });
 clearCompletedBtn.addEventListener("click", clearCompletedTasks);
 
-document.getElementById("confirmNo").addEventListener("click", () => hideOverlay("confirmOverlay"));
-
-let deleteCallback = null;
-function showConfirm(title, message, callback) {
-    document.getElementById("confirmTitle").textContent = title;
-    document.getElementById("confirmMessage").textContent = message;
-    deleteCallback = callback;
-    showOverlay("confirmOverlay");
-}
-document.getElementById("confirmYes").addEventListener("click", () => {
-    if (deleteCallback) deleteCallback();
-    hideOverlay("confirmOverlay");
-});
-
 function confirmDeleteTask(taskId, taskName) {
     showConfirm("Delete Task", `Delete "${taskName}"?`, () => deleteTask(taskId));
 }
@@ -1037,7 +1098,7 @@ function confirmDeleteGroup(groupId) {
 }
 
 // --- INITIALIZATION ---
-loadUser(); 
+loadUser();
 
 </script>
 

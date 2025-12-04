@@ -23,7 +23,7 @@ const UserSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true, lowercase: true },
   password: { type: String, required: true },
   securityQuestion: String,
-  answer: String,
+  securityAnswer: String,
 });
 
 const GroupSchema = new mongoose.Schema({
@@ -74,26 +74,23 @@ const isAuthenticated = (req, res, next) => {
 
 app.post("/auth/register", async (req, res) => {
     try {
-        // 1. Receive the new fields
-        const { name, email, password, securityQuestion, answer } = req.body;
+        const { name, email, password, securityQuestion, securityAnswer } = req.body;
 
-        if (!name || !email || !password || !securityQuestion || !answer) {
+        if (!name || !email || !password || !securityQuestion || !securityAnswer) {
             return res.status(400).json({ error: "All fields are required" });
         }
         const existing = await User.findOne({ email });
         if (existing) return res.status(400).json({ error: "Email already exists" });
 
-        // 2. Hash the Password AND the Security Answer
         const hashedPassword = await bcrypt.hash(password, 10);
-        const hashedAnswer = await bcrypt.hash(answer, 10);
+        const hashedAnswer = await bcrypt.hash(securityAnswer, 10);
 
-        // 3. Save to database
         const user = new User({ 
             name, 
             email, 
             password: hashedPassword,
             securityQuestion,
-            answer: hashedAnswer // Save the encrypted answer
+            securityAnswer: hashedAnswer
         });
         
         await user.save();
@@ -103,7 +100,6 @@ app.post("/auth/register", async (req, res) => {
         res.status(500).json({ error: "Server error" });
     }
 });
-
 
 app.post("/auth/login", async (req, res) => {
   try {
@@ -140,12 +136,29 @@ app.post("/auth/forgot/verify", async (req, res) => {
     try {
         const { email, answer } = req.body;
         const user = await User.findOne({ email });
-        if (!user || user.answer.toLowerCase().trim() !== answer.toLowerCase().trim()) {
+
+        if (!user) {
             return res.status(401).json({ error: "Incorrect answer" });
         }
-        const resetToken = jwt.sign({ userId: user._id, purpose: "reset_password" }, process.env.JWT_SECRET || "secret", { expiresIn: '10m' });
+
+        const isMatch = await bcrypt.compare(answer.trim().toLowerCase(), user.securityAnswer);
+
+        if (!isMatch) {
+            return res.status(401).json({ error: "Incorrect answer" });
+        }
+
+        // 3. Generate Token
+        const resetToken = jwt.sign(
+            { userId: user._id, purpose: "reset_password" }, 
+            process.env.JWT_SECRET || "secret", 
+            { expiresIn: '10m' }
+        );
+        
         res.json({ message: "Answer correct", resetToken });
-    } catch (err) { res.status(500).json({ error: "Server error" }); }
+    } catch (err) { 
+        console.error("Verify Error:", err);
+        res.status(500).json({ error: "Server error" }); 
+    }
 });
 
 app.post("/auth/forgot/reset", async (req, res) => {
@@ -169,29 +182,25 @@ app.get("/auth/profile", isAuthenticated, async (req, res) => {
 
 app.put("/auth/profile", isAuthenticated, async (req, res) => {
   try {
-    // 1. Destructure the new fields from the request
-    const { name, email, password, securityQuestion, answer } = req.body;
+    const { name, email, password, securityQuestion, securityAnswer } = req.body;
     
     const updateData = { name, email };
 
-    // 2. Hash the password if provided
     if (password) {
       updateData.password = await bcrypt.hash(password, 10);
     }
 
-    // 3. Update Security Question
     if (securityQuestion) {
       updateData.securityQuestion = securityQuestion;
     }
 
-    // 4. Hash the Security Answer if provided (Fixes encryption issue)
-    if (answer) {
-      updateData.answer = await bcrypt.hash(answer, 10);
+    if (securityAnswer) {
+      updateData.securityAnswer = await bcrypt.hash(securityAnswer, 10);
     }
 
     const user = await User.findByIdAndUpdate(req.userId, updateData, {
       new: true,
-    }).select("-password -answer"); // Exclude sensitive data from response
+    }).select("-password -securityAnswer"); // Exclude sensitive data from response
 
     if (!user) return res.status(404).json({ error: "User not found" });
 
@@ -238,6 +247,7 @@ apiRouter.get("/users/search", async (req, res) => {
     } catch (err) { res.status(500).json({ error: "Search failed" }); }
 });
 
+// Group Routes
 apiRouter.post("/groups", async (req, res) => {
     const { name, type } = req.body;
     const group = new Group({ name, type, owner: req.userId, collaborators: type === 'collab' ? [req.userId] : [] });
@@ -254,23 +264,19 @@ apiRouter.post("/groups", async (req, res) => {
 apiRouter.put("/groups/:id", async (req, res) => {
   try {
     const { name, type } = req.body;
-    // Find the group and ensure the current user is the owner
     const group = await Group.findOne({ _id: req.params.id, owner: req.userId });
 
     if (!group) {
       return res.status(404).json({ error: "Group not found or you are not the owner" });
     }
 
-    // Update fields
     if (name) group.name = name;
     if (type) group.type = type;
 
-    // Logic to handle switching types
+
     if (type === 'personal') {
-        // Optional: Clear collaborators if switching back to personal
         group.collaborators = [];
     } else if (type === 'collab') {
-        // Ensure owner is listed as a collaborator if switching to collab
         if (!group.collaborators.includes(req.userId)) {
             group.collaborators.push(req.userId);
         }
@@ -310,7 +316,6 @@ apiRouter.delete("/groups/:groupId/collaborators/:userId", async (req, res) => {
         const group = await Group.findById(req.params.groupId);
         if (!group) return res.status(404).json({ error: "Group not found" });
 
-        // Check Permissions: Allow if Owner OR if Self
         const isOwner = group.owner.toString() === req.userId;
         const isSelf = req.userId === req.params.userId;
 
@@ -337,7 +342,6 @@ apiRouter.put("/tasks/:id", async (req, res) => {
     const { groupId, ...rest } = req.body;
     const update = { ...rest };
     
-    // Only update the group if groupId is explicitly included in the request
     if (groupId !== undefined) {
         update.group = groupId || null;
     }
@@ -360,5 +364,5 @@ apiRouter.delete("/tasks/completed", async (req, res) => {
     res.json({ message: "Cleared" });
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));

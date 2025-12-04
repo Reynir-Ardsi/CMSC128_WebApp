@@ -131,11 +131,10 @@
         display: none;
     }
 
-    /* --- NOTIFICATION MODAL STYLES --- */
     .overlay {
         position: fixed;
         inset: 0;
-        display: none; /* Hidden by default */
+        display: none;
         align-items: center;
         justify-content: center;
         background: rgba(0,0,0,0.6);
@@ -229,11 +228,10 @@
     </div>
 
 <script>
-    // --- Helper function to get auth headers ---
     function getAuthHeaders() {
         const token = localStorage.getItem("token");
         if (!token) {
-            window.location.replace('index.html');
+            window.location.href = "index.html";
             return null;
         }
         return {
@@ -247,21 +245,18 @@
     const passwordField = document.getElementById('password');
     const userId = localStorage.getItem('userId');
 
-    // --- Modal Logic ---
     const overlay = document.getElementById('notificationOverlay');
     const modalTitle = document.getElementById('modalTitle');
     const modalMsg = document.getElementById('modalMessage');
     const modalBtn = document.getElementById('modalOkBtn');
     
-    // Store callback action for the OK button
     let onModalClose = null;
 
     function showModal(title, message, callback = null) {
         modalTitle.textContent = title;
         modalMsg.textContent = message;
         
-        // Color coding title based on success/error logic is optional, 
-        // but let's keep it clean white/primary for now.
+
         if (title.toLowerCase().includes('success')) {
             modalTitle.style.color = 'var(--text)';
         } else {
@@ -280,10 +275,9 @@
         }
     });
 
-    // --- Load user data on page load ---
     async function loadProfile() {
         if (!userId) {
-            window.location.replace('index.html');
+            window.location.href = "index.html";
             return;
         }
         
@@ -306,11 +300,10 @@
             console.error(err);
             localStorage.removeItem("token");
             localStorage.removeItem("userId");
-            window.location.replace('index.html');
+            window.location.href = "index.html";
         }
     }
     
-    // --- Show/Hide Toggles ---
     const togglePasswordBtn = document.getElementById('togglePassword');
     togglePasswordBtn.addEventListener('click', () => {
         if (passwordField.type === 'password') {
@@ -334,29 +327,28 @@
         }
     });
 
-document.getElementById('saveBtn').addEventListener('click', async () => {
+    document.getElementById('saveBtn').addEventListener('click', async () => {
         const headers = getAuthHeaders();
         if (!headers) return;
 
         const name = nameField.value.trim();
         const email = emailField.value.trim();
         const password = passwordField.value;
+
         const securityQuestion = document.getElementById('securityQuestion').value;
         const securityAnswer = document.getElementById('securityAnswer').value;
 
         const body = { name, email };
-        
-        if (password) { 
+
+        if (password) {
             body.password = password;
         }
-        
-        // 2. Add them to the body object if they exist
-        // Note: The backend expects the answer field to be named 'answer', not 'securityAnswer'
+
         if (securityQuestion) {
             body.securityQuestion = securityQuestion;
         }
         if (securityAnswer) {
-            body.answer = securityAnswer; 
+            body.securityAnswer = securityAnswer;
         }
 
         try {
@@ -372,10 +364,11 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
                 throw new Error(data.error || "Failed to save");
             }
 
+
             showModal("Success", "Profile updated successfully! Please log in again.", () => {
                 localStorage.removeItem("token");
                 localStorage.removeItem("userId");
-                window.location.replace('index.html');
+                window.location.href = "index.html";
             });
 
         } catch (err) {
@@ -384,7 +377,6 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
         }
     });
 
-    // --- Cancel and Logout ---
     document.getElementById('cancelBtn').addEventListener('click', () => {
         window.location.href = "todoDashboard.html"
     });
@@ -392,10 +384,9 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
     document.getElementById('logoutBtn').addEventListener('click', () => {
         localStorage.removeItem("token");
         localStorage.removeItem("userId");
-        window.location.replace('index.html');
+        window.location.href = "index.html";
     });
 
-    // --- Initial Load ---
     loadProfile();
 </script>
 </body>
