@@ -276,6 +276,7 @@ apiRouter.get("/users/search", async (req, res) => {
     } catch (err) { res.status(500).json({ error: "Search failed" }); }
 });
 
+// Group Routes
 apiRouter.post("/groups", async (req, res) => {
     const { name, type } = req.body;
     const group = new Group({ name, type, owner: req.userId, collaborators: type === 'collab' ? [req.userId] : [] });
@@ -388,17 +389,16 @@ apiRouter.delete("/tasks/completed", async (req, res) => {
     res.json({ message: "Cleared" });
 });
 
-// Default root route
+
 app.get("/", (req, res) => {
     res.send("Backend is running!");
 });
 
-// --- EXPORT FOR VERCEL (IMPORTANT) ---
-// If running locally (node server.js), listen on port
+
 if (require.main === module) {
     const PORT = process.env.PORT || 5000;
     app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
 }
 
-// Export the Express API
+
 module.exports = app;

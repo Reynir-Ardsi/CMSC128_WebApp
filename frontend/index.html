@@ -101,7 +101,6 @@ button:hover {
     color: #a9c8ff;
 }
 
-/* Modal Overlay */
 .overlay {
     position: fixed;
     top: 0;
@@ -113,7 +112,6 @@ button:hover {
     display: none;
 }
 
-/* Forgot Password Modal */
 #forget-container {
     position: fixed;
     top: 50%;
@@ -136,12 +134,10 @@ button:hover {
     pointer-events: auto;
 }
 
-/* Helper for multi-step visibility */
 .hidden {
     display: none !important;
 }
 
-/* Custom Alert Popup */
 #alertOverlay {
     position: fixed;
     top: 0;
@@ -202,7 +198,6 @@ button:hover {
         <input type="password" id="register-password" placeholder="Password" required />
         <input type="password" id="register-confirm" placeholder="Confirm Password" required />
         
-        <!-- Restored Security Question -->
         <select id="register-question" required>
             <option value="">Select a Security Question</option>
             <option value="What is your first pet’s name?">What is your first pet’s name?</option>
@@ -219,25 +214,21 @@ button:hover {
     </div>
 </div>
 
-<!-- FORGOT PASSWORD OVERLAY -->
 <div class="overlay" id="forgetOverlay"></div>
 <div id="forget-container">
     <h2 id="forget-title">Reset Password</h2>
     
-    <!-- Step 1: Email -->
     <form id="fp-step-1">
         <input type="email" id="fp-email" placeholder="Enter your email" required />
         <button type="submit">Continue</button>
     </form>
 
-    <!-- Step 2: Question -->
     <form id="fp-step-2" class="hidden">
         <p id="fp-question-text" style="color:var(--text-secondary); margin-bottom:12px;"></p>
         <input type="text" id="fp-answer" placeholder="Your answer" required />
         <button type="submit">Verify</button>
     </form>
 
-    <!-- Step 3: New Password -->
     <form id="fp-step-3" class="hidden">
         <input type="password" id="fp-new-pass" placeholder="New password" required />
         <button type="submit">Reset Password</button>
@@ -248,7 +239,6 @@ button:hover {
     </div>
 </div>
 
-<!-- ALERT MODAL -->
 <div class="overlay" id="alertOverlay"></div>
 <div id="alert-container">
     <h2 id="alert-title">Notification</h2>
@@ -257,7 +247,7 @@ button:hover {
 </div>
 
 <script>
-// --- UTILS: Custom Alert ---
+
 const alertOverlay = document.getElementById("alertOverlay");
 const alertContainer = document.getElementById("alert-container");
 const alertMsg = document.getElementById("alert-message");
@@ -274,13 +264,11 @@ alertBtn.onclick = () => {
     alertContainer.classList.remove("active");
 };
 
-// --- DOM REFS ---
 const loginContainer = document.getElementById("login-container");
 const registerContainer = document.getElementById("register-container");
 const forgetContainer = document.getElementById("forget-container");
 const forgetOverlay = document.getElementById("forgetOverlay");
 
-// --- NAVIGATION ---
 document.getElementById("to-register").onclick = e => {
     e.preventDefault();
     loginContainer.style.display = "none";
@@ -293,7 +281,6 @@ document.getElementById("to-login").onclick = e => {
     loginContainer.style.display = "block";
 };
 
-// --- FORGOT PASSWORD LOGIC ---
 let fpState = { email: "", token: "" };
 
 const steps = [
@@ -310,13 +297,13 @@ function showStep(index) {
 }
 
 function openForgetModal() {
-    fpState = { email: "", token: "" }; // Reset state
+    fpState = { email: "", token: "" };
     document.getElementById("fp-email").value = "";
     document.getElementById("fp-answer").value = "";
     document.getElementById("fp-new-pass").value = "";
     document.getElementById("forget-title").textContent = "Reset Password";
     
-    showStep(0); // Show email form
+    showStep(0);
     forgetOverlay.style.display = "block";
     forgetContainer.classList.add("active");
 }
@@ -329,7 +316,6 @@ function closeForgetModal() {
 document.getElementById("to-forget").onclick = (e) => { e.preventDefault(); openForgetModal(); };
 document.getElementById("close-forget").onclick = (e) => { e.preventDefault(); closeForgetModal(); };
 
-// Step 1: Check Email
 document.getElementById("fp-step-1").onsubmit = async (e) => {
     e.preventDefault();
     const email = document.getElementById("fp-email").value.trim().toLowerCase();
@@ -344,7 +330,6 @@ document.getElementById("fp-step-1").onsubmit = async (e) => {
         
         if (!res.ok) return showAlert(data.error);
         
-        // Success: Move to Step 2
         fpState.email = email;
         document.getElementById("fp-question-text").textContent = data.question;
         document.getElementById("forget-title").textContent = "Security Question";
@@ -352,10 +337,9 @@ document.getElementById("fp-step-1").onsubmit = async (e) => {
     } catch (err) { showAlert("Network error"); }
 };
 
-// Step 2: Verify Answer
 document.getElementById("fp-step-2").onsubmit = async (e) => {
     e.preventDefault();
-    const answer = document.getElementById("fp-answer").value.trim();
+    const answer = document.getElementById("fp-answer").value.trim().toLowerCase();
     
     try {
         const res = await fetch("https://todo-web-app.vercel.app/auth/forgot/verify", {
@@ -367,14 +351,12 @@ document.getElementById("fp-step-2").onsubmit = async (e) => {
         
         if (!res.ok) return showAlert(data.error);
         
-        // Success: Get reset token and move to Step 3
         fpState.token = data.resetToken;
         document.getElementById("forget-title").textContent = "New Password";
         showStep(2);
     } catch (err) { showAlert("Network error"); }
 };
 
-// Step 3: Reset Password
 document.getElementById("fp-step-3").onsubmit = async (e) => {
     e.preventDefault();
     const newPassword = document.getElementById("fp-new-pass").value;
@@ -394,7 +376,6 @@ document.getElementById("fp-step-3").onsubmit = async (e) => {
     } catch (err) { showAlert("Network error"); }
 };
 
-// --- LOGIN ---
 document.getElementById("loginForm").onsubmit = async (e) => {
     e.preventDefault();
     const email = document.getElementById("login-email").value.trim().toLowerCase();
@@ -418,8 +399,6 @@ document.getElementById("loginForm").onsubmit = async (e) => {
     } catch (err) { showAlert("Network error"); }
 };
 
-
-//--Register--
 document.getElementById("registerForm").onsubmit = async e => {
     e.preventDefault();
     const name = document.getElementById("register-name").value.trim();
@@ -427,17 +406,18 @@ document.getElementById("registerForm").onsubmit = async e => {
     const password = document.getElementById("register-password").value;
     const confirm = document.getElementById("register-confirm").value;
     
-    // 1. Get the values (Uncommented these lines)
     const securityQuestion = document.getElementById("register-question").value;
     const securityAnswer = document.getElementById("register-answer").value.trim().toLowerCase();
 
-    if (password !== confirm) return alert("❌ Passwords do not match");
+    if (password !== confirm) {
+        showAlert("❌ Passwords do not match");
+        return; 
+    }
 
     try {
         const res = await fetch("https://todo-web-app.vercel.app/auth/register", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            // 2. Include them in the JSON body
             body: JSON.stringify({ 
                 name, 
                 email, 
@@ -447,18 +427,18 @@ document.getElementById("registerForm").onsubmit = async e => {
             })
         });
         const data = await res.json();
-
         if (res.ok) {
-            alert("✅ Account registered! Login now.");
+            showAlert("✅ Account registered! Login now.");
+            
             registerContainer.style.display = "none";
             loginContainer.style.display = "block";
             document.getElementById("registerForm").reset();
         } else {
-            alert("❌ " + (data.error || "Registration failed"));
+            showAlert("❌ " + (data.error || "Registration failed"));
         }
     } catch (err) {
         console.error(err);
-        alert("⚠️ Network error");
+        showAlert("⚠️ Network error");
     }
 };
 </script>
