@@ -291,7 +291,7 @@
         if (!headers) return;
 
         try {
-            const res = await fetch(`https://cmsc128-webapp.onrender.com/auth/profile`, {
+            const res = await fetch(`https://todo-web-app.vercel.app/auth/profile`, {
                 method: 'GET',
                 headers: headers
             });
@@ -345,13 +345,11 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
         const securityAnswer = document.getElementById('securityAnswer').value;
 
         const body = { name, email };
-        
+
         if (password) { 
             body.password = password;
         }
         
-        // 2. Add them to the body object if they exist
-        // Note: The backend expects the answer field to be named 'answer', not 'securityAnswer'
         if (securityQuestion) {
             body.securityQuestion = securityQuestion;
         }
@@ -360,7 +358,7 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
         }
 
         try {
-            const res = await fetch(`https://cmsc128-webapp.onrender.com/auth/profile`, {
+            const res = await fetch(`https://todo-web-app.vercel.app/auth/profile`, {
                 method: 'PUT',
                 headers: headers,
                 body: JSON.stringify(body)
