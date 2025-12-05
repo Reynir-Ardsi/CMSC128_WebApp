@@ -1081,7 +1081,7 @@ document.getElementById("deleteGroupBtn").addEventListener("click", () => {
 });
 
 document.getElementById("btnAllTasks").addEventListener("click", () => selectGroup(null));
-document.querySelector(".profile-btn").addEventListener("click", () => { window.location.href = "accountProfile.html"; });
+document.querySelector(".profile-btn").addEventListener("click", () => { window.location.replace('accountProfile.html'); });
 clearCompletedBtn.addEventListener("click", clearCompletedTasks);
 
 function confirmDeleteTask(taskId, taskName) {
