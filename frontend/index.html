@@ -321,7 +321,7 @@ document.getElementById("fp-step-1").onsubmit = async (e) => {
     const email = document.getElementById("fp-email").value.trim().toLowerCase();
     
     try {
-        const res = await fetch("https://cmsc-128-web-app-qkj7.vercel.app/auth/forgot", {
+        const res = await fetch("https://todo-web-app-qkj7.vercel.app/auth/forgot", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({ email })
@@ -342,7 +342,7 @@ document.getElementById("fp-step-2").onsubmit = async (e) => {
     const answer = document.getElementById("fp-answer").value.trim().toLowerCase();
     
     try {
-        const res = await fetch("https://cmsc-128-web-app-qkj7.vercel.app/auth/forgot/verify", {
+        const res = await fetch("https://todo-web-app-qkj7.vercel.app/auth/forgot/verify", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({ email: fpState.email, answer })
@@ -362,7 +362,7 @@ document.getElementById("fp-step-3").onsubmit = async (e) => {
     const newPassword = document.getElementById("fp-new-pass").value;
     
     try {
-        const res = await fetch("https://cmsc-128-web-app-qkj7.vercel.app/auth/forgot/reset", {
+        const res = await fetch("https://todo-web-app-qkj7.vercel.app/auth/forgot/reset", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({ resetToken: fpState.token, newPassword })
@@ -382,7 +382,7 @@ document.getElementById("loginForm").onsubmit = async (e) => {
     const password = document.getElementById("login-password").value;
 
     try {
-        const res = await fetch("https://cmsc-128-web-app-qkj7.vercel.app/auth/login", {
+        const res = await fetch("https://todo-web-app-qkj7.vercel.app/auth/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email, password })
@@ -415,7 +415,7 @@ document.getElementById("registerForm").onsubmit = async e => {
     }
 
     try {
-        const res = await fetch("https://cmsc-128-web-app-qkj7.vercel.app/auth/register", {
+        const res = await fetch("https://todo-web-app-qkj7.vercel.app/auth/register", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ 
