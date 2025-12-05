@@ -1048,8 +1048,8 @@ async function clearCompletedTasks() {
                 // 4. Update UI
                 await loadData();
                 showAlert("Cleared completed tasks.");
-            } catch (err) { 
-                showAlert("Error clearing tasks"); 
+            } catch (err) {
+                showAlert("Error clearing tasks");
             }
         }
     );
@@ -1064,7 +1064,7 @@ document.querySelectorAll('.dropdown-item').forEach(item => {
         state.sortBy = e.target.dataset.sort;
         document.querySelectorAll('.dropdown-item').forEach(i => i.classList.remove('active'));
         e.target.classList.add('active');
-        renderTasks(); 
+        renderTasks();
     });
 });
 

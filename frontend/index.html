@@ -392,7 +392,7 @@ document.getElementById("loginForm").onsubmit = async (e) => {
         if (res.ok && data.token) {
             localStorage.setItem("token", data.token);
             localStorage.setItem("userId", data.userId);
-            window.location.replace('https://cmsc-128-web-app.vercel.app/todoDashboard.html.html');
+            window.location.replace('todoDashboard.html');
         } else {
             showAlert(data.error || "Login failed");
         }
