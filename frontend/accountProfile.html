@@ -231,7 +231,7 @@
     function getAuthHeaders() {
         const token = localStorage.getItem("token");
         if (!token) {
-            window.location.href = "index.html";
+            window.location.replace('index.html');
             return null;
         }
         return {
@@ -277,7 +277,7 @@
 
     async function loadProfile() {
         if (!userId) {
-            window.location.href = "index.html";
+            window.location.replace('index.html');
             return;
         }
         
@@ -300,7 +300,7 @@
             console.error(err);
             localStorage.removeItem("token");
             localStorage.removeItem("userId");
-            window.location.href = "index.html";
+            window.location.replace('index.html');
         }
     }
     
@@ -368,7 +368,7 @@
             showModal("Success", "Profile updated successfully! Please log in again.", () => {
                 localStorage.removeItem("token");
                 localStorage.removeItem("userId");
-                window.location.href = "index.html";
+                window.location.replace('index.html');
             });
 
         } catch (err) {
@@ -384,7 +384,7 @@
     document.getElementById('logoutBtn').addEventListener('click', () => {
         localStorage.removeItem("token");
         localStorage.removeItem("userId");
-        window.location.href = "index.html";
+        window.location.replace('index.html');
     });
 
     loadProfile();
